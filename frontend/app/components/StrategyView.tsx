@@ -52,6 +52,47 @@ function deriveStrategyVerdict(signal: Signal, strategy: Strategy) {
   return null;
 }
 
+type ActionItem = { icon: string; label: string; text: string };
+
+function deriveActions(signal: Signal, strategy: Strategy): ActionItem[] {
+  const tp = signal.tp ? signal.tp.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "—";
+  const sl = signal.sl ? signal.sl.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "—";
+  const ind = signal.indicators ?? {};
+  const adx = Math.round(ind.adx ?? 0);
+  const rsi = Math.round(ind.rsi ?? 50);
+
+  if (strategy === "sniper") {
+    return [
+      { icon: "🆓", label: "Flat", text: signal.action === "long_setup" ? `Set alert at ${signal.close}. Enter on breakout + volume ≥ 1.3×. Stop ${sl}, target ${tp}.` : signal.action === "short_setup" ? `Set alert at ${signal.close}. Enter on breakdown + volume ≥ 1.3×. Stop ${sl}, target ${tp}.` : "Wait for clean breakout setup. Sniper does not force entry." },
+      { icon: "🟢", label: "Long low cb", text: `Hold. Tighten stop to ${sl}. Take 30% off at TP1 (${tp}). Trail remainder.` },
+      { icon: "🟡", label: "Long mid cb", text: `Hold but set hard stop ${sl} immediately. If price stalls 2 days — consider partial exit.` },
+      { icon: "🔴", label: "Long high cb / underwater", text: "Cut or set tight stop. Sniper does not hold losing breakout trades — they either work quickly or they don't." },
+    ];
+  }
+  if (strategy === "rockstar") {
+    return [
+      { icon: "🆓", label: "Flat", text: signal.trend === "bullish" ? `Trend confirmed (ADX ${adx}). Wait for pullback to EMA50 for lower-risk entry. Don't chase breakouts.` : signal.trend === "bearish" ? `Downtrend active (ADX ${adx}). Short on rallies, not breakdowns. Wait for retest.` : "No trend (ADX low). Rockstar stays flat in choppy markets." },
+      { icon: "🟢", label: "Long low cb (trend following)", text: `Trend is your friend. Hold and trail stop below EMA50. Add size only if ADX ${adx} continues rising.` },
+      { icon: "🟡", label: "Long mid cb", text: `Hold if trend intact. If EMA50 loses EMA200 — exit immediately. Trend is the signal.` },
+      { icon: "🔴", label: "Long high cb / against trend", text: signal.trend === "bearish" ? "Bearish trend active — if you're long, review thesis. Stop below last swing low." : "Above entry in bullish trend. Hold with trailing stop." },
+    ];
+  }
+  if (strategy === "watcher") {
+    return [
+      { icon: "🆓", label: "Flat", text: rsi < 40 && signal.trend === "bullish" ? `RSI ${rsi} — value zone. Accumulate 25% position. DCA on further weakness. Target long-term hold.` : signal.trend === "bullish" ? `Bullish trend intact but RSI ${rsi} not oversold yet. Wait for RSI < 40 for better entry.` : "Watcher avoids entry without bullish structure. Cash is a position — patience." },
+      { icon: "🟢", label: "Long low cb", text: `Hold long-term. Trail stop below major swing low. Not ${sl} — structure stop. Thesis > price action.` },
+      { icon: "🟡", label: "Long mid cb", text: "Monitor. Stress-test your thesis. If fundamentals unchanged — hold. If thesis broke — exit, not average down." },
+      { icon: "🔴", label: "Long high cb / underwater", text: "Analyze honestly: is this a value trap? Watcher does not DCA into broken trends. Define your invalidation and honor it." },
+    ];
+  }
+  // "all" — generic
+  return [
+    { icon: "🆓", label: "Flat", text: signal.action === "long_setup" ? `Entry zone ${signal.close}. Stop ${sl}. Target ${tp}.` : signal.action === "short_setup" ? `Short zone ${signal.close}. Stop ${sl}. Target ${tp}.` : "Wait for cleaner setup before entering." },
+    { icon: "🟢", label: "Long low cb", text: `Hold. Trail stop to ${sl}.` },
+    { icon: "🔴", label: "Long high cb", text: "Review stop placement." },
+  ];
+}
+
 export default function StrategyView({ signal }: { signal: Signal }) {
   const [active, setActive] = useState<Strategy>("all");
 
@@ -104,15 +145,34 @@ export default function StrategyView({ signal }: { signal: Signal }) {
         ) : (
           (() => {
             const v = deriveStrategyVerdict(signal, active);
+            const actions = deriveActions(signal, active);
             const tab = TABS.find((t) => t.value === active)!;
             if (!v) return null;
             return (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-zinc-500">{tab.label}</span>
-                  <span className={`text-sm font-bold ${v.color}`}>{v.verdict}</span>
+              <div className="space-y-4">
+                {/* Verdict */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm font-semibold text-zinc-500">{tab.label}</span>
+                    <span className={`text-sm font-bold ${v.color}`}>{v.verdict}</span>
+                  </div>
+                  <p className="text-sm leading-relaxed text-zinc-600">{v.note}</p>
                 </div>
-                <p className="text-sm leading-relaxed text-zinc-600">{v.note}</p>
+                {/* Action by Position */}
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 mb-2">Action by Position</div>
+                  <div className="space-y-2">
+                    {actions.map((a, i) => (
+                      <div key={i} className="flex gap-2.5 text-sm border border-line bg-panel px-3 py-2">
+                        <span className="text-base shrink-0">{a.icon}</span>
+                        <div>
+                          <span className="font-semibold text-ink">{a.label}: </span>
+                          <span className="text-zinc-600">{a.text}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             );
           })()
