@@ -6,6 +6,7 @@ import ScanButton from "./components/ScanButton";
 import SummarizeButton from "./components/SummarizeButton";
 import SignalsTable from "./components/SignalsTable";
 import DailyReport from "./components/DailyReport";
+import DnaSelector from "./components/DnaSelector";
 
 const actionLabels: Record<Signal["action"], string> = {
   long_setup: "Long setup",
@@ -61,7 +62,8 @@ export default async function Home() {
             <MetricCard icon={<Target size={13} />} label="Active" value={active.length} />
             <MetricCard icon={<Bell size={13} />} label="Changed" value={changed.length} />
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 justify-end">
+            <DnaSelector />
             <SummarizeButton />
             <ScanButton />
           </div>

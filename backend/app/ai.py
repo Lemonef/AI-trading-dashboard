@@ -226,14 +226,18 @@ Include:
 2. Top 3-5 candidates with full 4-layer analysis (Macro/Regime/Setup/Catalyst)
 3. Setup score /10 with progress bars for each candidate
 4. Decision box (GO/WAIT/NO TRADE) color-coded verdict
-5. Action by position state (Flat / Long low cb / Long high cb)
-6. Entry trigger + Invalidation conditions
-7. Blind-spot warning calibrated to {settings.investor_dna} DNA
+5. For EACH candidate, include a section: "Strategy by Type" with 3 rows:
+   - 🔥 Rockstar (Trend Rider): [what this strategy says about this signal]
+   - 🎯 Sniper (Speed Racer): [entry trigger assessment]
+   - 🏔️ Watcher (Patient Investor): [long-term view]
+6. Action by position state (Flat / Long low cb / Long high cb)
+7. Entry trigger + Invalidation conditions
+8. Blind-spot warning
 
 Use the §11 markdown format with emoji anchors (🌍🌡️🎯⚡🟢🟡🔴).
-Write in English. Include Thai phrases naturally where they add clarity (like in the examples).
-Keep each candidate analysis focused and scannable.
-End with DNA-specific strategic advice for {settings.investor_dna}."""
+Write in English. Include Thai phrases naturally where they add clarity.
+Keep each candidate focused and scannable.
+End with overall DNA advice for {settings.investor_dna}."""
 
     try:
         print(f"[Groq daily] generating §11 report for {len(candidates)} candidates…")

@@ -200,7 +200,7 @@ export default function SignalsTable({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search symbol or name…"
-          className="h-7 rounded border border-line bg-white px-2.5 text-xs text-ink placeholder-zinc-400 outline-none focus:border-zinc-400 w-44"
+          className="h-8 rounded border border-line bg-white px-2.5 text-xs text-ink placeholder-zinc-400 outline-none focus:border-zinc-400 w-full sm:w-44"
         />
         <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 ml-1">Sort</span>
         <SortBtn label="Signal" k="action" />
@@ -225,12 +225,12 @@ export default function SignalsTable({
       </div>
 
       {/* Table header */}
-      <div className="grid grid-cols-[1.6fr_0.6fr_0.9fr_1.2fr_1.4fr_auto] border-b border-line bg-panel px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+      <div className="grid grid-cols-[1fr_0.9fr_0.9fr_auto] sm:grid-cols-[1.6fr_0.6fr_0.9fr_1.2fr_1.4fr_auto] border-b border-line bg-panel px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
         <span>Symbol</span>
-        <span>Trend</span>
+        <span className="hidden sm:block">Trend</span>
         <span>Signal</span>
-        <span>Live Price</span>
-        <span>Entry / TP / SL / R:R</span>
+        <span>Price</span>
+        <span className="hidden sm:block">Entry / TP / SL / R:R</span>
         <span className="w-7" />
       </div>
 
@@ -248,7 +248,7 @@ export default function SignalsTable({
           return (
             <div
               key={`${signal.symbol}-${signal.created_at}`}
-              className="grid grid-cols-[1.6fr_0.6fr_0.9fr_1.2fr_1.4fr_auto] items-center gap-x-3 border-b border-line px-4 py-3 transition-colors hover:bg-[#FAFAF7] last:border-b-0"
+              className="grid grid-cols-[1fr_0.9fr_0.9fr_auto] sm:grid-cols-[1.6fr_0.6fr_0.9fr_1.2fr_1.4fr_auto] items-center gap-x-2 sm:gap-x-3 border-b border-line px-4 py-3 transition-colors hover:bg-[#FAFAF7] last:border-b-0"
             >
               {/* Symbol */}
               <Link href={`/signals/${symbolToSlug(signal.symbol)}`} className="flex min-w-0 items-start gap-2">
@@ -266,8 +266,8 @@ export default function SignalsTable({
                 </div>
               </Link>
 
-              {/* Trend */}
-              <Link href={`/signals/${symbolToSlug(signal.symbol)}`} className="flex items-center gap-1">
+              {/* Trend — hidden on mobile */}
+              <Link href={`/signals/${symbolToSlug(signal.symbol)}`} className="hidden sm:flex items-center gap-1">
                 {signal.trend === "bearish"
                   ? <TrendingDown size={14} className="shrink-0 text-sell" />
                   : <TrendingUp size={14} className={`shrink-0 ${signal.trend === "bullish" ? "text-buy" : "text-wait"}`} />
@@ -298,8 +298,8 @@ export default function SignalsTable({
                 )}
               </Link>
 
-              {/* Entry / TP / SL / R:R */}
-              <Link href={`/signals/${symbolToSlug(signal.symbol)}`} className="space-y-0.5 text-xs">
+              {/* Entry / TP / SL / R:R — hidden on mobile */}
+              <Link href={`/signals/${symbolToSlug(signal.symbol)}`} className="hidden sm:block space-y-0.5 text-xs">
                 <div className="flex gap-1.5 items-baseline">
                   <span className="text-[10px] text-zinc-400 w-8">Entry</span>
                   <span className="tabular-nums font-medium text-ink">{fmt(signal.close)}</span>
