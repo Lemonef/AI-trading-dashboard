@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { TrendingDown, TrendingUp, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw } from "lucide-react";
 import { symbolToSlug, type Signal } from "../../lib/api";
@@ -79,6 +80,7 @@ export default function SignalsTable({
   const [prices, setPrices] = useState<PriceMap>({});
   const [fetching, setFetching] = useState(false);
   const [lastFetch, setLastFetch] = useState<string | null>(null);
+  const router = useRouter();
   const [sortKey, setSortKey] = useState<SortKey>("action");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [filter, setFilter] = useState<AssetClass>("All");
@@ -246,10 +248,10 @@ export default function SignalsTable({
           const changePct = live?.changePct;
 
           return (
-            <Link
+            <div
               key={`${signal.symbol}-${signal.created_at}`}
-              href={`/signals/${symbolToSlug(signal.symbol)}`}
-              className="grid grid-cols-[1fr_0.9fr_0.9fr_auto] sm:grid-cols-[1.6fr_0.6fr_0.9fr_1.2fr_1.4fr_auto] items-center gap-x-2 sm:gap-x-3 border-b border-line px-4 py-3 transition-colors hover:bg-[#FAFAF7] last:border-b-0"
+              onClick={() => router.push(`/signals/${symbolToSlug(signal.symbol)}`)}
+              className="grid grid-cols-[1fr_0.9fr_0.9fr_auto] sm:grid-cols-[1.6fr_0.6fr_0.9fr_1.2fr_1.4fr_auto] items-center gap-x-2 sm:gap-x-3 border-b border-line px-4 py-3 transition-colors hover:bg-[#FAFAF7] last:border-b-0 cursor-pointer"
             >
               {/* Symbol */}
               <div className="flex min-w-0 items-start gap-2">
@@ -327,14 +329,14 @@ export default function SignalsTable({
                 )}
               </div>
 
-              {/* Watchlist toggle — stopPropagation prevents row Link from firing */}
+              {/* Watchlist toggle — stopPropagation prevents row onClick */}
               <WatchlistToggle
                 symbol={signal.symbol}
                 exchange={signal.exchange}
                 timeframe={signal.timeframe}
                 inWatchlist={inWl}
               />
-            </Link>
+            </div>
           );
         })
       )}
