@@ -4,7 +4,7 @@ from app.config import Settings
 from app.models import ScanResult, Signal
 from app.storage import SignalStore
 from app.trading.indicators import enrich_indicators
-from app.trading.market_data import demo_ohlcv, fetch_ohlcv_with_fallback
+from app.trading.market_data import demo_ohlcv, fetch_ohlcv_with_fallback, fetch_ohlcv_yfinance, is_crypto_symbol
 from app.trading.rules import build_signal
 
 
@@ -15,12 +15,17 @@ async def run_scan(settings: Settings) -> ScanResult:
     for symbol in settings.symbols:
         previous_action = store.latest_action(symbol, settings.timeframe)
         try:
-            candles, exchange_id, market_symbol = fetch_ohlcv_with_fallback(
-                settings.exchanges,
-                symbol,
-                settings.timeframe,
-                settings.ohlcv_limit,
-            )
+            if is_crypto_symbol(symbol):
+                candles, exchange_id, market_symbol = fetch_ohlcv_with_fallback(
+                    settings.exchanges,
+                    symbol,
+                    settings.timeframe,
+                    settings.ohlcv_limit,
+                )
+            else:
+                candles = fetch_ohlcv_yfinance(symbol, settings.timeframe, settings.ohlcv_limit)
+                exchange_id = "yfinance"
+                market_symbol = symbol
         except Exception:
             if not settings.allow_demo_data:
                 raise

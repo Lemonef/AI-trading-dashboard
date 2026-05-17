@@ -8,6 +8,27 @@ class MarketDataUnavailable(RuntimeError):
     pass
 
 
+def is_crypto_symbol(symbol: str) -> bool:
+    return "/" in symbol
+
+
+def fetch_ohlcv_yfinance(symbol: str, timeframe: str, limit: int) -> pd.DataFrame:
+    import yfinance as yf
+
+    interval_map = {"1d": "1d", "4h": "60m", "1h": "60m", "1w": "1wk", "1M": "1mo"}
+    interval = interval_map.get(timeframe, "1d")
+    period = "2y" if limit >= 200 else "1y"
+
+    hist = yf.Ticker(symbol).history(period=period, interval=interval)
+    if hist.empty:
+        raise MarketDataUnavailable(f"yfinance returned no data for {symbol}")
+
+    df = hist[["Open", "High", "Low", "Close", "Volume"]].copy()
+    df.columns = pd.Index(["open", "high", "low", "close", "volume"])
+    df = df.dropna().reset_index(drop=True)
+    return df.tail(limit).reset_index(drop=True)
+
+
 def fetch_ohlcv_with_fallback(
     exchange_ids: list[str],
     symbol: str,

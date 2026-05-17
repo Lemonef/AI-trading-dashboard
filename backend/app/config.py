@@ -8,7 +8,18 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=(".env", "../.env", "../../.env"), extra="ignore")
 
-    watchlist: str = "BTC/USDT,ETH/USDT,SOL/USDT,BNB/USDT"
+    watchlist: str = (
+        # Crypto
+        "BTC/USDT,ETH/USDT,SOL/USDT,BNB/USDT,"
+        # US Stocks
+        "AAPL,MSFT,NVDA,TSLA,AMZN,"
+        # ETFs
+        "SPY,QQQ,XLE,XLK,"
+        # Forex
+        "EURUSD=X,GBPUSD=X,USDJPY=X,"
+        # Metals & Commodities
+        "GC=F,SI=F,CL=F"
+    )
     exchange_id: str = "binance"
     fallback_exchange_ids: str = "coinbase,kraken"
     timeframe: str = "1d"

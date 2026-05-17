@@ -1,17 +1,9 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import {
-  Activity,
-  Bell,
-  Brain,
-  ShieldCheck,
-  Target,
-  TrendingDown,
-  TrendingUp,
-  Zap,
-} from "lucide-react";
-import { getSignals, getDailySummary, symbolToSlug, type Signal } from "../lib/api";
+import { Activity, Bell, Brain, ShieldCheck, Target, TrendingDown, TrendingUp, Zap } from "lucide-react";
+import { getSignals, getWatchlist, getDailySummary, symbolToSlug, type Signal } from "../lib/api";
 import ScanButton from "./components/ScanButton";
+import WatchlistToggle from "./components/WatchlistToggle";
 
 const actionLabels: Record<Signal["action"], string> = {
   long_setup: "Long setup",
@@ -20,116 +12,56 @@ const actionLabels: Record<Signal["action"], string> = {
   no_trade: "No trade",
 };
 
-function toneFor(signal: Signal) {
-  if (signal.action === "long_setup") return "border-buy text-buy";
-  if (signal.action === "short_setup") return "border-sell text-sell";
-  if (signal.action === "watch") return "border-wait text-wait";
+function toneFor(action: Signal["action"]) {
+  if (action === "long_setup") return "border-buy text-buy";
+  if (action === "short_setup") return "border-sell text-sell";
+  if (action === "watch") return "border-wait text-wait";
   return "border-zinc-300 text-zinc-400";
 }
 
-function confidenceBar(signal: Signal) {
-  const pct = Math.round(signal.confidence * 100);
-  const color =
-    signal.action === "long_setup"
-      ? "bg-buy"
-      : signal.action === "short_setup"
-        ? "bg-sell"
-        : "bg-wait";
-  return { pct, color };
+function fmt(v: number | null | undefined, d = 2): string {
+  if (v == null || Number.isNaN(v)) return "—";
+  return v.toLocaleString("en-US", { maximumFractionDigits: d });
 }
 
-function fmt(value: number | null | undefined, digits = 2): string {
-  if (value === null || value === undefined || Number.isNaN(value)) return "—";
-  return value.toLocaleString("en-US", { maximumFractionDigits: digits });
+function pctStr(target: number | null | undefined, close: number): string {
+  if (!target) return "";
+  const p = ((target - close) / close) * 100;
+  return `${p >= 0 ? "+" : ""}${p.toFixed(1)}%`;
 }
 
-function rsiBadge(rsi: number | null | undefined) {
-  if (!rsi) return null;
-  const val = Math.round(rsi);
-  const color =
-    rsi > 70
-      ? "text-sell bg-red-50 border-red-100"
-      : rsi < 30
-        ? "text-buy bg-green-50 border-green-100"
-        : "text-zinc-500 bg-zinc-50 border-zinc-200";
-  return { val, color };
+function rrRatio(signal: Signal): string {
+  if (!signal.tp || !signal.sl) return "—";
+  const reward = Math.abs(signal.tp - signal.close);
+  const risk = Math.abs(signal.close - signal.sl);
+  if (!risk) return "—";
+  return `1 : ${(reward / risk).toFixed(1)}`;
 }
 
-function adxBadge(adx: number | null | undefined) {
-  if (!adx) return null;
-  const val = Math.round(adx);
-  const color =
-    adx >= 30
-      ? "text-buy bg-green-50 border-green-100"
-      : adx >= 20
-        ? "text-wait bg-amber-50 border-amber-100"
-        : "text-zinc-400 bg-zinc-50 border-zinc-200";
-  return { val, color };
-}
-
-function indicatorValueColor(key: string, value: number): string {
-  if (key === "rsi") {
-    if (value > 70) return "text-sell font-bold";
-    if (value < 30) return "text-buy font-bold";
-  }
-  if (key === "adx") {
-    if (value >= 30) return "text-buy";
-    if (value >= 20) return "text-wait";
-    return "text-zinc-500";
-  }
-  if (key === "volume_ratio" && value >= 1.3) return "text-buy";
-  return "text-ink";
-}
-
-const indicatorDisplayName: Record<string, string> = {
-  ema50: "EMA 50",
-  ema200: "EMA 200",
-  macd: "MACD",
-  macd_signal: "MACD Sig",
-  adx: "ADX",
-  rsi: "RSI",
-  atr: "ATR",
-  volume_ratio: "Vol ×",
-};
-
-function MetricCard({
-  icon,
-  label,
-  value,
-  dim = false,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: number;
-  dim?: boolean;
-}) {
+function MetricCard({ icon, label, value, dim = false }: { icon: ReactNode; label: string; value: number; dim?: boolean }) {
   return (
     <div className="min-w-[100px] border border-line bg-white px-4 py-3">
-      <div className="flex items-center gap-1.5 text-xs text-zinc-500">
-        {icon}
-        {label}
-      </div>
-      <div className={`mt-1 text-2xl font-semibold tabular-nums ${dim ? "text-zinc-400" : "text-ink"}`}>
-        {value}
-      </div>
+      <div className="flex items-center gap-1.5 text-xs text-zinc-500">{icon}{label}</div>
+      <div className={`mt-1 text-2xl font-semibold tabular-nums ${dim ? "text-zinc-400" : "text-ink"}`}>{value}</div>
     </div>
   );
 }
 
 export default async function Home() {
-  const [signals, dailySummary] = await Promise.all([getSignals(), getDailySummary()]);
+  const [signals, watchlist, dailySummary] = await Promise.all([
+    getSignals(), getWatchlist(), getDailySummary(),
+  ]);
+
+  const active = signals.filter((s) => s.action !== "no_trade");
+  const changed = signals.filter((s) => s.changed);
+  const activeSetups = signals.filter((s) => s.action === "long_setup" || s.action === "short_setup");
+  const top = activeSetups[0] ?? active[0] ?? signals[0];
   const isDemo = signals.length > 0 && signals.every((s) => s.exchange === "demo");
   const lastUpdated = signals.length > 0
     ? new Date(signals[0].created_at).toLocaleString("en-US", {
         month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false,
       })
     : null;
-  const active = signals.filter((s) => s.action !== "no_trade");
-  const changed = signals.filter((s) => s.changed);
-  const activeSetups = signals.filter(
-    (s) => s.action === "long_setup" || s.action === "short_setup",
-  );
-  const top = activeSetups[0] ?? active[0] ?? signals[0];
 
   return (
     <main className="min-h-screen">
@@ -137,7 +69,7 @@ export default async function Home() {
       <section className="border-b border-line bg-[#F7F6F0]">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap gap-3">
-            <MetricCard icon={<Activity size={13} />} label="Watchlist" value={signals.length} dim />
+            <MetricCard icon={<Activity size={13} />} label="Markets" value={signals.length} dim />
             <MetricCard icon={<Target size={13} />} label="Active" value={active.length} />
             <MetricCard icon={<Bell size={13} />} label="Changed" value={changed.length} />
           </div>
@@ -150,7 +82,7 @@ export default async function Home() {
         <div className="border-b border-amber-200 bg-amber-50 px-5 py-2.5">
           <div className="mx-auto flex max-w-7xl items-center gap-2 text-sm text-amber-800">
             <span className="font-semibold">⚠ Demo data</span>
-            <span className="text-amber-600">— backend scanner not connected. Start the backend or configure Supabase to see live signals.</span>
+            <span className="text-amber-600">— backend scanner not connected. Trigger a scan to load live market data.</span>
           </div>
         </div>
       )}
@@ -164,97 +96,103 @@ export default async function Home() {
       )}
 
       {/* Body */}
-      <div className="mx-auto grid max-w-7xl gap-5 px-5 py-6 lg:grid-cols-[1.4fr_0.6fr]">
-        {/* Signal table */}
+      <div className="mx-auto grid max-w-7xl gap-5 px-5 py-6 lg:grid-cols-[1.5fr_0.5fr]">
+
+        {/* Browse table */}
         <div className="overflow-hidden border border-line bg-white">
-          <div className="grid grid-cols-[1.2fr_0.65fr_1.1fr_0.75fr] border-b border-line bg-panel px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400 md:grid-cols-[1.1fr_0.6fr_1.1fr_0.7fr_1.2fr]">
-            <span>Market</span>
+          <div className="border-b border-line bg-panel px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">
+            Browse Markets — click row to view detail · + to add to Watchlist
+          </div>
+          {/* Table header */}
+          <div className="grid grid-cols-[1.8fr_0.7fr_1fr_1.2fr_auto] border-b border-line bg-panel px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+            <span>Symbol</span>
             <span>Trend</span>
             <span>Signal</span>
-            <span>Risk</span>
-            <span className="hidden md:block">Reason</span>
+            <span>Entry / TP / SL / R:R</span>
+            <span className="w-7" />
           </div>
 
           {signals.length === 0 ? (
             <div className="px-6 py-14 text-center text-sm text-zinc-500">
-              No signals yet.{" "}
-              <span className="font-semibold text-ink">Hit Scan Now</span> to run the scanner.
+              No signals yet. Hit <span className="font-semibold text-ink">Scan Now</span>.
             </div>
           ) : (
             signals.map((signal) => {
-              const { pct, color } = confidenceBar(signal);
-              const rsi = rsiBadge(signal.indicators?.rsi);
-              const adx = adxBadge(signal.indicators?.adx);
+              const inWl = watchlist.has(signal.symbol);
+              const rr = rrRatio(signal);
               return (
-                <Link
+                <div
                   key={`${signal.symbol}-${signal.created_at}`}
-                  href={`/signals/${symbolToSlug(signal.symbol)}`}
-                  className="grid grid-cols-[1.2fr_0.65fr_1.1fr_0.75fr] gap-x-3 border-b border-line px-4 py-4 transition-colors hover:bg-[#FAFAF7] last:border-b-0 md:grid-cols-[1.1fr_0.6fr_1.1fr_0.7fr_1.2fr] cursor-pointer"
+                  className="grid grid-cols-[1.8fr_0.7fr_1fr_1.2fr_auto] items-center gap-x-3 border-b border-line px-4 py-3 transition-colors hover:bg-[#FAFAF7] last:border-b-0"
                 >
-                  <div className="flex min-w-0 items-start gap-2">
+                  {/* Symbol — clickable */}
+                  <Link href={`/signals/${symbolToSlug(signal.symbol)}`} className="flex min-w-0 items-start gap-2">
                     {signal.changed && (
-                      <span className="mt-[7px] inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-wait" title="Signal changed" />
+                      <span className="mt-[6px] inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-wait" />
                     )}
                     <div className="min-w-0">
-                      <div className="truncate font-semibold leading-tight">{signal.symbol}</div>
-                      <div className="mt-0.5 text-xs text-zinc-400">
-                        {signal.exchange} · {signal.timeframe} ·{" "}
-                        <span className="tabular-nums">{fmt(signal.close)}</span>
+                      <div className="truncate font-semibold leading-tight text-ink">{signal.symbol}</div>
+                      <div className="mt-0.5 text-[10px] text-zinc-400">
+                        {signal.exchange} · {signal.timeframe}
                       </div>
                     </div>
-                  </div>
+                  </Link>
 
-                  <div className="flex items-start gap-1.5 pt-0.5">
-                    {signal.trend === "bearish" ? (
-                      <TrendingDown size={15} className="mt-0.5 shrink-0 text-sell" />
-                    ) : (
-                      <TrendingUp size={15} className={`mt-0.5 shrink-0 ${signal.trend === "bullish" ? "text-buy" : "text-wait"}`} />
-                    )}
-                    <span className="text-sm capitalize text-zinc-700">{signal.trend}</span>
-                  </div>
+                  {/* Trend */}
+                  <Link href={`/signals/${symbolToSlug(signal.symbol)}`} className="flex items-center gap-1">
+                    {signal.trend === "bearish"
+                      ? <TrendingDown size={14} className="shrink-0 text-sell" />
+                      : <TrendingUp size={14} className={`shrink-0 ${signal.trend === "bullish" ? "text-buy" : "text-wait"}`} />
+                    }
+                    <span className="text-xs capitalize text-zinc-600">{signal.trend}</span>
+                  </Link>
 
-                  <div>
-                    <span className={`inline-flex border px-2 py-0.5 text-xs font-semibold ${toneFor(signal)}`}>
+                  {/* Signal badge + confidence */}
+                  <Link href={`/signals/${symbolToSlug(signal.symbol)}`}>
+                    <span className={`inline-flex border px-2 py-0.5 text-[11px] font-semibold ${toneFor(signal.action)}`}>
                       {actionLabels[signal.action]}
                     </span>
-                    <div className="mt-1.5 h-[3px] w-full max-w-[72px] overflow-hidden rounded-full bg-line">
-                      <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+                    <div className="mt-1 text-[10px] text-zinc-400 tabular-nums">
+                      {Math.round(signal.confidence * 100)}% conf
                     </div>
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                      {rsi && (
-                        <span className={`rounded border px-1 py-px text-[10px] font-medium ${rsi.color}`}>
-                          RSI {rsi.val}
-                        </span>
-                      )}
-                      {adx && (
-                        <span className={`rounded border px-1 py-px text-[10px] font-medium ${adx.color}`}>
-                          ADX {adx.val}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  </Link>
 
-                  <div className="space-y-0.5 text-sm">
-                    {signal.tp ? (
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-[10px] font-medium uppercase text-zinc-400">TP</span>
+                  {/* Entry / TP / SL / R:R */}
+                  <Link href={`/signals/${symbolToSlug(signal.symbol)}`} className="space-y-0.5 text-xs">
+                    <div className="flex gap-1.5 items-baseline">
+                      <span className="text-zinc-400 text-[10px]">Entry</span>
+                      <span className="tabular-nums font-medium text-ink">{fmt(signal.close)}</span>
+                    </div>
+                    {signal.tp && (
+                      <div className="flex gap-1.5 items-baseline">
+                        <span className="text-zinc-400 text-[10px]">TP</span>
                         <span className="tabular-nums font-medium text-buy">{fmt(signal.tp)}</span>
+                        <span className="text-buy/70 text-[10px]">{pctStr(signal.tp, signal.close)}</span>
                       </div>
-                    ) : (
-                      <span className="text-zinc-300">—</span>
                     )}
                     {signal.sl && (
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-[10px] font-medium uppercase text-zinc-400">SL</span>
+                      <div className="flex gap-1.5 items-baseline">
+                        <span className="text-zinc-400 text-[10px]">SL</span>
                         <span className="tabular-nums font-medium text-sell">{fmt(signal.sl)}</span>
+                        <span className="text-sell/70 text-[10px]">{pctStr(signal.sl, signal.close)}</span>
                       </div>
                     )}
-                  </div>
+                    {rr !== "—" && (
+                      <div className="flex gap-1.5 items-baseline">
+                        <span className="text-zinc-400 text-[10px]">R:R</span>
+                        <span className="tabular-nums font-medium text-zinc-600">{rr}</span>
+                      </div>
+                    )}
+                  </Link>
 
-                  <div className="hidden text-sm leading-5 text-zinc-600 md:block">
-                    {signal.reasons.slice(0, 2).join(" · ") || signal.summary}
-                  </div>
-                </Link>
+                  {/* Watchlist toggle */}
+                  <WatchlistToggle
+                    symbol={signal.symbol}
+                    exchange={signal.exchange}
+                    timeframe={signal.timeframe}
+                    inWatchlist={inWl}
+                  />
+                </div>
               );
             })
           )}
@@ -262,12 +200,11 @@ export default async function Home() {
 
         {/* Sidebar */}
         <aside className="space-y-4">
-          {/* Claude daily summary */}
           {dailySummary && (
             <section className="border border-ink bg-ink p-4 text-white">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">
-                  <Brain size={12} />Claude Daily Brief
+                  <Brain size={12} />Daily Brief
                 </div>
                 <span className="text-[10px] text-zinc-500 tabular-nums">{dailySummary.date}</span>
               </div>
@@ -277,11 +214,11 @@ export default async function Home() {
 
           <section className="border border-line bg-white p-4">
             <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">
-              <Brain size={12} />Signal Summary
+              <Brain size={12} />Top Signal
             </div>
             <h2 className="mt-2.5 text-base font-semibold">{top?.symbol ?? "No signals"}</h2>
             <p className="mt-1.5 text-sm leading-[1.65] text-zinc-600">
-              {top?.summary ?? "Run the scanner to generate the first market read."}
+              {top?.summary ?? "Run scanner to generate first read."}
             </p>
           </section>
 
@@ -290,14 +227,13 @@ export default async function Home() {
               <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">
                 <Zap size={12} />Active Setups
               </div>
-              <ul className="mt-3 space-y-2.5">
+              <ul className="mt-3 space-y-2">
                 {activeSetups.map((s) => (
                   <li key={s.symbol} className="flex items-center justify-between text-sm">
-                    <div>
-                      <span className="font-semibold">{s.symbol}</span>
-                      <span className="ml-1.5 text-xs text-zinc-400">{fmt(s.confidence * 100, 0)}%</span>
-                    </div>
-                    <span className={`border px-1.5 py-0.5 text-xs font-semibold ${toneFor(s)}`}>
+                    <Link href={`/signals/${symbolToSlug(s.symbol)}`} className="font-semibold hover:underline">
+                      {s.symbol}
+                    </Link>
+                    <span className={`border px-1.5 py-0.5 text-[11px] font-semibold ${toneFor(s.action)}`}>
                       {actionLabels[s.action]}
                     </span>
                   </li>
@@ -312,16 +248,25 @@ export default async function Home() {
                 Indicators · {top.symbol}
               </div>
               <dl className="mt-3 grid grid-cols-2 gap-2">
-                {Object.entries(top.indicators ?? {}).map(([key, value]) => (
-                  <div key={key} className="border border-line bg-panel px-3 py-2">
-                    <dt className="text-[10px] font-medium uppercase tracking-wide text-zinc-400">
-                      {indicatorDisplayName[key] ?? key}
-                    </dt>
-                    <dd className={`mt-0.5 text-sm tabular-nums ${value !== null && value !== undefined ? indicatorValueColor(key, value) : "text-zinc-400"}`}>
-                      {fmt(value, key === "volume_ratio" ? 2 : key === "rsi" || key === "adx" ? 1 : 2)}
-                    </dd>
-                  </div>
-                ))}
+                {Object.entries(top.indicators ?? {}).map(([key, value]) => {
+                  const names: Record<string, string> = {
+                    ema50: "EMA 50", ema200: "EMA 200", macd: "MACD",
+                    macd_signal: "MACD Sig", adx: "ADX", rsi: "RSI",
+                    atr: "ATR", volume_ratio: "Vol ×",
+                  };
+                  let vc = "text-ink";
+                  if (key === "rsi" && value != null) vc = value > 70 ? "text-sell font-bold" : value < 30 ? "text-buy font-bold" : "text-ink";
+                  if (key === "adx" && value != null) vc = value >= 30 ? "text-buy" : value >= 20 ? "text-wait" : "text-zinc-500";
+                  if (key === "volume_ratio" && value != null && value >= 1.3) vc = "text-buy";
+                  return (
+                    <div key={key} className="border border-line bg-panel px-3 py-2">
+                      <dt className="text-[10px] font-medium uppercase tracking-wide text-zinc-400">{names[key] ?? key}</dt>
+                      <dd className={`mt-0.5 text-sm tabular-nums ${vc}`}>
+                        {fmt(value, key === "volume_ratio" ? 2 : key === "rsi" || key === "adx" ? 1 : 2)}
+                      </dd>
+                    </div>
+                  );
+                })}
               </dl>
             </section>
           )}
@@ -331,7 +276,7 @@ export default async function Home() {
               <ShieldCheck size={12} />Execution Guard
             </div>
             <p className="mt-2.5 text-sm leading-[1.65] text-zinc-600">
-              Scanner and alerts are live. Order execution locked until confirm button + order review endpoint are added.
+              Scanner and alerts live. Execution locked until confirm button + order review endpoint added.
             </p>
           </section>
         </aside>

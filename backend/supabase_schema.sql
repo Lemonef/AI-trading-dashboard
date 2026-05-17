@@ -1,3 +1,23 @@
+-- ── Watchlist ─────────────────────────────────────────────────────────────
+create table if not exists public.watchlist (
+  id uuid primary key default gen_random_uuid(),
+  symbol text not null unique,
+  exchange text not null default 'yfinance',
+  timeframe text not null default '1d',
+  added_at timestamptz not null default now()
+);
+
+alter table public.watchlist enable row level security;
+
+drop policy if exists "watchlist readable" on public.watchlist;
+drop policy if exists "watchlist writable" on public.watchlist;
+
+create policy "watchlist readable"
+  on public.watchlist for select to anon, authenticated using (true);
+
+create policy "watchlist writable"
+  on public.watchlist for all to anon, authenticated using (true) with check (true);
+
 -- ── Daily AI summaries ────────────────────────────────────────────────────
 create table if not exists public.daily_summaries (
   id uuid primary key default gen_random_uuid(),
