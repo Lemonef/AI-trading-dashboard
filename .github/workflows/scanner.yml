@@ -16,9 +16,9 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     env:
-      WATCHLIST: ${{ vars.WATCHLIST || 'BTC/USD,ETH/USD,SOL/USD' }}
-      EXCHANGE_ID: ${{ vars.EXCHANGE_ID || 'coinbase' }}
-      FALLBACK_EXCHANGE_IDS: ${{ vars.FALLBACK_EXCHANGE_IDS || 'kraken' }}
+      WATCHLIST: ${{ vars.WATCHLIST || 'BTC/USDT,ETH/USDT,SOL/USDT,BNB/USDT,AAPL,MSFT,NVDA,TSLA,AMZN,SPY,QQQ,XLE,XLK,EURUSD=X,GBPUSD=X,USDJPY=X,GC=F,SI=F,CL=F' }}
+      EXCHANGE_ID: ${{ vars.EXCHANGE_ID || 'binance' }}
+      FALLBACK_EXCHANGE_IDS: ${{ vars.FALLBACK_EXCHANGE_IDS || 'coinbase,kraken' }}
       TIMEFRAME: ${{ vars.TIMEFRAME || '1d' }}
       OHLCV_LIMIT: ${{ vars.OHLCV_LIMIT || '260' }}
       ALLOW_DEMO_DATA: "false"
