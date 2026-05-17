@@ -118,6 +118,12 @@ function MetricCard({
 
 export default async function Home() {
   const [signals, dailySummary] = await Promise.all([getSignals(), getDailySummary()]);
+  const isDemo = signals.length > 0 && signals.every((s) => s.exchange === "demo");
+  const lastUpdated = signals.length > 0
+    ? new Date(signals[0].created_at).toLocaleString("en-US", {
+        month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false,
+      })
+    : null;
   const active = signals.filter((s) => s.action !== "no_trade");
   const changed = signals.filter((s) => s.changed);
   const activeSetups = signals.filter(
@@ -138,6 +144,24 @@ export default async function Home() {
           <ScanButton />
         </div>
       </section>
+
+      {/* Data source banner */}
+      {isDemo && (
+        <div className="border-b border-amber-200 bg-amber-50 px-5 py-2.5">
+          <div className="mx-auto flex max-w-7xl items-center gap-2 text-sm text-amber-800">
+            <span className="font-semibold">⚠ Demo data</span>
+            <span className="text-amber-600">— backend scanner not connected. Start the backend or configure Supabase to see live signals.</span>
+          </div>
+        </div>
+      )}
+      {!isDemo && lastUpdated && (
+        <div className="border-b border-line bg-[#F7F6F0] px-5 py-1.5">
+          <div className="mx-auto flex max-w-7xl items-center gap-2 text-xs text-zinc-400">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-buy" />
+            Live data · last scan {lastUpdated}
+          </div>
+        </div>
+      )}
 
       {/* Body */}
       <div className="mx-auto grid max-w-7xl gap-5 px-5 py-6 lg:grid-cols-[1.4fr_0.6fr]">
