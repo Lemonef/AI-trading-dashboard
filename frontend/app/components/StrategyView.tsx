@@ -145,15 +145,32 @@ export default function StrategyView({ signal }: { signal: Signal }) {
         ) : (
           (() => {
             const v = deriveStrategyVerdict(signal, active);
+            const actions = deriveActions(signal, active);
             const tab = TABS.find((t) => t.value === active)!;
             if (!v) return null;
             return (
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm font-semibold text-zinc-500">{tab.label}</span>
-                  <span className={`text-sm font-bold ${v.color}`}>{v.verdict}</span>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm font-semibold text-zinc-500">{tab.label}</span>
+                    <span className={`text-sm font-bold ${v.color}`}>{v.verdict}</span>
+                  </div>
+                  <p className="text-sm leading-relaxed text-zinc-600">{v.note}</p>
                 </div>
-                <p className="text-sm leading-relaxed text-zinc-600">{v.note}</p>
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 mb-2">Action by Position</div>
+                  <div className="space-y-2">
+                    {actions.map((a, i) => (
+                      <div key={i} className="flex gap-2.5 text-sm border border-line bg-panel px-3 py-2">
+                        <span className="text-base shrink-0">{a.icon}</span>
+                        <div>
+                          <span className="font-semibold text-ink">{a.label}: </span>
+                          <span className="text-zinc-600">{a.text}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             );
           })()
