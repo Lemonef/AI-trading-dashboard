@@ -28,9 +28,7 @@ class Settings(BaseSettings):
         # Major Forex
         "EURUSD=X,GBPUSD=X,USDJPY=X,AUDUSD=X,USDCAD=X,USDCHF=X,NZDUSD=X,"
         # Asian Forex
-        "USDCNH=X,USDSGD=X,USDINR=X,USDTHB=X,"
-        # Spot Metals (forex-broker style: XAU, XAG, XPT)
-        "XAUUSD=X,XAGUSD=X,XPTUSD=X"
+        "USDSGD=X,USDINR=X,USDTHB=X"
     )
     exchange_id: str = "binance"
     fallback_exchange_ids: str = "coinbase,kraken"

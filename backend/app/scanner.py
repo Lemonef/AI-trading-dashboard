@@ -47,12 +47,14 @@ async def run_scan(settings: Settings) -> ScanResult:
                 candles = fetch_ohlcv_yfinance(symbol, settings.timeframe, settings.ohlcv_limit)
                 exchange_id = "yfinance"
                 market_symbol = symbol
-        except Exception:
-            if not settings.allow_demo_data:
-                raise
-            candles = demo_ohlcv(symbol, settings.ohlcv_limit)
-            exchange_id = "demo"
-            market_symbol = symbol
+        except Exception as e:
+            if settings.allow_demo_data:
+                candles = demo_ohlcv(symbol, settings.ohlcv_limit)
+                exchange_id = "demo"
+                market_symbol = symbol
+            else:
+                print(f"  Skipping {symbol} — {e}")
+                continue
 
         enriched = enrich_indicators(candles)
         if len(enriched) < 2:
