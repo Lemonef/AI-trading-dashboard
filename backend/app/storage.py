@@ -48,10 +48,12 @@ class SignalStore:
 
     def save_signal(self, signal: Signal) -> Signal:
         payload = signal.model_dump(mode="json")
+        # Never overwrite ai_enhanced on upsert — managed by the summarize pipeline
+        payload.pop("ai_enhanced", None)
         if self.supabase_enabled:
             response = httpx.post(
                 f"{self.settings.supabase_url}/rest/v1/signals",
-                headers={**self._headers(), "Prefer": "return=minimal"},
+                headers={**self._headers(), "Prefer": "resolution=merge-duplicates,return=minimal"},
                 json=payload,
                 timeout=20,
             )

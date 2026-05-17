@@ -56,6 +56,10 @@ create table if not exists public.signals (
   created_at timestamptz not null default now()
 );
 
+-- Upsert key: one row per symbol+timeframe (scanner updates in place)
+create unique index if not exists signals_symbol_timeframe_unique
+  on public.signals (symbol, timeframe);
+
 create index if not exists signals_symbol_time_created_idx
   on public.signals (symbol, timeframe, created_at desc);
 
