@@ -55,6 +55,9 @@ async def run_scan(settings: Settings) -> ScanResult:
             market_symbol = symbol
 
         enriched = enrich_indicators(candles)
+        if len(enriched) < 2:
+            print(f"  Skipping {market_symbol} — insufficient data ({len(enriched)} rows)")
+            continue
         signal = build_signal(market_symbol, exchange_id, settings.timeframe, enriched, previous_action)
         signal.summary = await summarize_signal(signal, settings)
         store.save_signal(signal)
