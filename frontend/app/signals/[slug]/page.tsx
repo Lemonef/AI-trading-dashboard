@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import StrategyView from "../../components/StrategyView";
 import { ArrowLeft, TrendingDown, TrendingUp } from "lucide-react";
 import { getSignals, slugToSymbol, type Signal } from "../../../lib/api";
 
@@ -370,6 +371,9 @@ export default async function SignalDetailPage({
             <span className="ml-2 text-sm text-zinc-500">— {scoreLabel(setupScore)}</span>
           </div>
         </div>
+
+        {/* ── Strategy view ───────────────────────────────────────────────── */}
+        <StrategyView signal={signal} />
 
         {/* ── Decision box ─────────────────────────────────────────────────── */}
         <div className={`border px-5 py-4 ${verdictBoxStyle[signal.action]}`}>
