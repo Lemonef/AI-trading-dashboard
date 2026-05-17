@@ -96,7 +96,15 @@ async function getSupabaseSignals(): Promise<Signal[]> {
       throw new Error(`Supabase returned ${response.status}`);
     }
 
-    return response.json();
+    const rows: Signal[] = await response.json();
+    // Keep only the latest signal per symbol (rows already ordered desc)
+    const seen = new Set<string>();
+    return rows.filter((s) => {
+      const key = `${s.symbol}:${s.timeframe}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   } catch {
     return [];
   }
