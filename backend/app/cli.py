@@ -27,13 +27,16 @@ async def main() -> None:
             if key not in seen:
                 seen.add(key)
                 unique.append(s)
-        print(f"Found {len(unique)} unique signals")
+        print(f"Found {len(unique)} unique signals | supabase={store.supabase_enabled}")
         for signal in unique:
+            print(f"  {signal.symbol} id={signal.id}")
             new_summary, ai_enhanced = await force_summarize_signal(signal, settings)
             if signal.id:
                 store.update_signal_summary(signal.id, new_summary, ai_enhanced)
+            else:
+                print(f"    ⚠ no id — skipping update")
             label = "✦ Gemini" if ai_enhanced else "⚠ fallback (check GEMINI_API_KEY)"
-            print(f"  {signal.symbol}: {label}")
+            print(f"    → {label}")
         print("Done.")
         return
 

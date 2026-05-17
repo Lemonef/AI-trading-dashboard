@@ -67,16 +67,20 @@ class SignalStore:
         return signal
 
     def update_signal_summary(self, signal_id: str, summary: str, ai_enhanced: bool) -> None:
-        if self.supabase_enabled:
-            httpx.patch(
-                f"{self.settings.supabase_url}/rest/v1/signals?id=eq.{signal_id}",
-                headers={**self._headers(), "Prefer": "return=minimal"},
-                json={"summary": summary, "ai_enhanced": ai_enhanced},
-                timeout=20,
-            ).raise_for_status()
+        if not self.supabase_enabled:
+            print(f"    [skip] supabase not enabled")
             return
-        # local fallback: re-save full signal would require more context; skip for now
-        pass
+        url = f"{self.settings.supabase_url}/rest/v1/signals?id=eq.{signal_id}"
+        response = httpx.patch(
+            url,
+            headers={**self._headers(), "Prefer": "return=minimal"},
+            json={"summary": summary, "ai_enhanced": ai_enhanced},
+            timeout=20,
+        )
+        print(f"    PATCH id={signal_id[:8]}… → {response.status_code}")
+        if not response.is_success:
+            print(f"    ERROR: {response.text}")
+        response.raise_for_status()
 
     def save_daily_summary(self, date_str: str, summary: str, signals_count: int) -> None:
         payload = {"date": date_str, "summary": summary, "signals_count": signals_count}
