@@ -246,12 +246,13 @@ export default function SignalsTable({
           const changePct = live?.changePct;
 
           return (
-            <div
+            <Link
               key={`${signal.symbol}-${signal.created_at}`}
+              href={`/signals/${symbolToSlug(signal.symbol)}`}
               className="grid grid-cols-[1fr_0.9fr_0.9fr_auto] sm:grid-cols-[1.6fr_0.6fr_0.9fr_1.2fr_1.4fr_auto] items-center gap-x-2 sm:gap-x-3 border-b border-line px-4 py-3 transition-colors hover:bg-[#FAFAF7] last:border-b-0"
             >
               {/* Symbol */}
-              <Link href={`/signals/${symbolToSlug(signal.symbol)}`} className="flex min-w-0 items-start gap-2">
+              <div className="flex min-w-0 items-start gap-2">
                 {signal.changed && (
                   <span className="mt-[5px] inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-wait" />
                 )}
@@ -264,29 +265,29 @@ export default function SignalsTable({
                     {signal.exchange} · {signal.timeframe}
                   </div>
                 </div>
-              </Link>
+              </div>
 
               {/* Trend — hidden on mobile */}
-              <Link href={`/signals/${symbolToSlug(signal.symbol)}`} className="hidden sm:flex items-center gap-1">
+              <div className="hidden sm:flex items-center gap-1">
                 {signal.trend === "bearish"
                   ? <TrendingDown size={14} className="shrink-0 text-sell" />
                   : <TrendingUp size={14} className={`shrink-0 ${signal.trend === "bullish" ? "text-buy" : "text-wait"}`} />
                 }
                 <span className="text-xs capitalize text-zinc-600">{signal.trend}</span>
-              </Link>
+              </div>
 
               {/* Signal + confidence */}
-              <Link href={`/signals/${symbolToSlug(signal.symbol)}`}>
+              <div>
                 <span className={`inline-flex border px-2 py-0.5 text-[11px] font-semibold ${toneFor(signal.action)}`}>
                   {actionLabels[signal.action]}
                 </span>
                 <div className="mt-1 text-[10px] text-zinc-400 tabular-nums">
                   {Math.round(signal.confidence * 100)}%
                 </div>
-              </Link>
+              </div>
 
               {/* Live price + today % */}
-              <Link href={`/signals/${symbolToSlug(signal.symbol)}`} className="space-y-0.5">
+              <div className="space-y-0.5">
                 <div className="text-base font-semibold tabular-nums text-ink">
                   {fmt(displayPrice)}
                   {!live && <span className="ml-1 text-[10px] text-zinc-400">(scan)</span>}
@@ -296,10 +297,10 @@ export default function SignalsTable({
                     {changePct >= 0 ? "▲" : "▼"} {Math.abs(changePct).toFixed(2)}% today
                   </div>
                 )}
-              </Link>
+              </div>
 
               {/* Entry / TP / SL / R:R — hidden on mobile */}
-              <Link href={`/signals/${symbolToSlug(signal.symbol)}`} className="hidden sm:block space-y-0.5 text-xs">
+              <div className="hidden sm:block space-y-0.5 text-xs">
                 <div className="flex gap-1.5 items-baseline">
                   <span className="text-[10px] text-zinc-400 w-8">Entry</span>
                   <span className="tabular-nums font-medium text-ink">{fmt(signal.close)}</span>
@@ -324,16 +325,16 @@ export default function SignalsTable({
                     <span className="tabular-nums font-medium text-zinc-600">{rrRatio(signal)}</span>
                   </div>
                 )}
-              </Link>
+              </div>
 
-              {/* Watchlist toggle */}
+              {/* Watchlist toggle — stopPropagation prevents row Link from firing */}
               <WatchlistToggle
                 symbol={signal.symbol}
                 exchange={signal.exchange}
                 timeframe={signal.timeframe}
                 inWatchlist={inWl}
               />
-            </div>
+            </Link>
           );
         })
       )}
