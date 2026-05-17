@@ -13,11 +13,8 @@ def _has_ai(settings: Settings) -> bool:
 
 
 async def summarize_signal(signal: Signal, settings: Settings) -> str:
-    """Called during scan — only runs when signal.changed is True."""
-    if not _has_ai(settings) or not signal.changed:
-        return signal.summary
-    text, _ = await _ai_summary(signal, settings)
-    return text
+    """Called during scan — uses template only. AI runs via --summarize button."""
+    return signal.summary
 
 
 async def force_summarize_signal(signal: Signal, settings: Settings) -> tuple[str, bool]:
