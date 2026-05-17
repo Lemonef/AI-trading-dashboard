@@ -53,6 +53,12 @@ export default async function Home() {
         month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false,
       })
     : null;
+  const lastAiSignal = signals.find((s) => s.ai_enhanced);
+  const lastAiSummary = lastAiSignal
+    ? new Date(lastAiSignal.created_at).toLocaleString("en-US", {
+        month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false,
+      })
+    : null;
 
   return (
     <main className="min-h-screen">
@@ -83,9 +89,17 @@ export default async function Home() {
       )}
       {!isDemo && lastUpdated && (
         <div className="border-b border-line bg-[#F7F6F0] px-5 py-1.5">
-          <div className="mx-auto flex max-w-7xl items-center gap-2 text-xs text-zinc-400">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-buy" />
-            Live data · last scan {lastUpdated}
+          <div className="mx-auto flex max-w-7xl items-center gap-3 text-xs text-zinc-400">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-buy" />
+              Last scan {lastUpdated}
+            </span>
+            {lastAiSummary && (
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400" />
+                Last AI summary {lastAiSummary}
+              </span>
+            )}
           </div>
         </div>
       )}
