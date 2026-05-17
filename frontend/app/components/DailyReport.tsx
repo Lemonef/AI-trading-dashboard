@@ -1,8 +1,9 @@
 "use client";
 
-import ReactMarkdown from "react-markdown";
-
 export default function DailyReport({ summary, date }: { summary: string; date: string }) {
+  // Convert markdown to simple formatted paragraphs without external deps
+  const lines = summary.split("\n");
+
   return (
     <div className="border border-line bg-white">
       <div className="flex items-center justify-between border-b border-line bg-panel px-5 py-3">
@@ -11,18 +12,20 @@ export default function DailyReport({ summary, date }: { summary: string; date: 
         </span>
         <span className="text-[10px] text-zinc-400 tabular-nums">{date}</span>
       </div>
-      <div className="prose prose-sm max-w-none px-5 py-4
-        prose-headings:font-semibold prose-headings:text-ink prose-headings:mt-4 prose-headings:mb-2
-        prose-h1:text-base prose-h2:text-sm prose-h3:text-xs prose-h3:uppercase prose-h3:tracking-wide
-        prose-p:text-zinc-600 prose-p:leading-relaxed prose-p:my-1.5
-        prose-strong:text-ink prose-strong:font-semibold
-        prose-ul:my-1.5 prose-li:text-zinc-600 prose-li:my-0.5
-        prose-hr:border-line prose-hr:my-4
-        prose-blockquote:border-l-2 prose-blockquote:border-zinc-300 prose-blockquote:pl-3 prose-blockquote:text-zinc-600 prose-blockquote:not-italic
-        prose-code:text-xs prose-code:bg-panel prose-code:px-1 prose-code:rounded prose-code:text-zinc-700
-        prose-table:text-xs prose-th:text-zinc-500 prose-th:font-semibold prose-td:text-zinc-600
-      ">
-        <ReactMarkdown>{summary}</ReactMarkdown>
+      <div className="px-5 py-4 space-y-1 text-sm text-zinc-700 leading-relaxed">
+        {lines.map((line, i) => {
+          if (!line.trim()) return <div key={i} className="h-2" />;
+          if (line.startsWith("# ")) return <h2 key={i} className="text-base font-semibold text-ink mt-3">{line.slice(2)}</h2>;
+          if (line.startsWith("## ")) return <h3 key={i} className="text-sm font-semibold text-ink mt-2">{line.slice(3)}</h3>;
+          if (line.startsWith("### ")) return <h4 key={i} className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mt-2">{line.slice(4)}</h4>;
+          if (line.startsWith("---")) return <hr key={i} className="border-line my-3" />;
+          if (line.startsWith("> ")) return <blockquote key={i} className="border-l-2 border-zinc-300 pl-3 text-zinc-600 italic">{line.slice(2)}</blockquote>;
+          if (line.startsWith("- ") || line.startsWith("* ")) return <div key={i} className="flex gap-2"><span className="text-zinc-400 shrink-0">·</span><span>{line.slice(2)}</span></div>;
+          if (/^\d+\. /.test(line)) return <div key={i} className="flex gap-2"><span className="text-zinc-400 shrink-0 tabular-nums">{line.match(/^\d+/)?.[0]}.</span><span>{line.replace(/^\d+\. /, "")}</span></div>;
+          // Bold
+          const boldLine = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+          return <p key={i} dangerouslySetInnerHTML={{ __html: boldLine }} className="text-zinc-600" />;
+        })}
       </div>
     </div>
   );

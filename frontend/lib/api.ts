@@ -1,9 +1,9 @@
 export function symbolToSlug(symbol: string): string {
-  return symbol.replace(/\//g, "--");
+  return symbol.replace(/\//g, "--").replace(/=/g, "__");
 }
 
 export function slugToSymbol(slug: string): string {
-  return slug.replace(/--/g, "/");
+  return slug.replace(/--/g, "/").replace(/__/g, "=");
 }
 
 export type Signal = {
