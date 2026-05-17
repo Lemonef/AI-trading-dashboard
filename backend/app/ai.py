@@ -25,28 +25,22 @@ async def summarize_signal(signal: Signal, settings: Settings) -> str:
 
 
 async def daily_strategy_summary(signals: list[Signal], settings: Settings) -> str | None:
-    if not settings.anthropic_api_key:
+    if not settings.gemini_api_key:
         return None
 
     try:
-        from anthropic import AsyncAnthropic
+        import google.generativeai as genai
 
-        client = AsyncAnthropic(api_key=settings.anthropic_api_key)
-        response = await client.messages.create(
-            model=settings.claude_daily_model,
-            max_tokens=500,
-            messages=[
-                {
-                    "role": "user",
-                    "content": (
-                        f"Date: {date.today().isoformat()}\n"
-                        "Write a daily strategic market summary from these scanner signals. "
-                        "Keep it under 180 words and remind the user this is not auto trading.\n"
-                        f"{[signal.model_dump(mode='json') for signal in signals]}"
-                    ),
-                }
-            ],
+        genai.configure(api_key=settings.gemini_api_key)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        prompt = (
+            f"Date: {date.today().isoformat()}\n"
+            "Write a daily strategic market summary from these trading scanner signals. "
+            "Keep it under 180 words. Cover overall trend direction, which setups look strongest, "
+            "and what to watch. Remind the user this is not financial advice and execution requires manual confirmation.\n"
+            f"{[signal.model_dump(mode='json') for signal in signals]}"
         )
-        return "".join(block.text for block in response.content if getattr(block, "type", "") == "text").strip()
+        response = await model.generate_content_async(prompt)
+        return response.text.strip() or None
     except Exception:
         return None
