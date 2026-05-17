@@ -17,9 +17,17 @@ export type Signal = {
 };
 
 export async function getSignals(): Promise<Signal[]> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  const supabaseSignals = await getSupabaseSignals();
+  if (supabaseSignals.length > 0) {
+    return supabaseSignals;
+  }
+
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
   try {
+    if (!apiUrl) {
+      throw new Error("No backend API URL configured");
+    }
     const response = await fetch(`${apiUrl}/api/signals`, { cache: "no-store" });
     if (!response.ok) {
       throw new Error(`API returned ${response.status}`);
@@ -51,5 +59,37 @@ export async function getSignals(): Promise<Signal[]> {
         reasons: ["EMA50 above EMA200", "ADX confirms trend", "Breakout watch"],
       },
     ];
+  }
+}
+
+async function getSupabaseSignals(): Promise<Signal[]> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !anonKey) {
+    return [];
+  }
+
+  try {
+    const url = new URL(`${supabaseUrl}/rest/v1/signals`);
+    url.searchParams.set("select", "*");
+    url.searchParams.set("order", "created_at.desc");
+    url.searchParams.set("limit", "50");
+
+    const response = await fetch(url, {
+      cache: "no-store",
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Supabase returned ${response.status}`);
+    }
+
+    return response.json();
+  } catch {
+    return [];
   }
 }

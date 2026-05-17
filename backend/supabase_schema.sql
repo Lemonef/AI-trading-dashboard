@@ -18,3 +18,13 @@ create table if not exists public.signals (
 
 create index if not exists signals_symbol_time_created_idx
   on public.signals (symbol, timeframe, created_at desc);
+
+alter table public.signals enable row level security;
+
+drop policy if exists "signals are publicly readable" on public.signals;
+
+create policy "signals are publicly readable"
+  on public.signals
+  for select
+  to anon, authenticated
+  using (true);

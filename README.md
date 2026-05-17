@@ -43,6 +43,8 @@ ALLOW_DEMO_DATA=true
 
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
@@ -56,6 +58,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 If Supabase credentials are absent, the backend writes to `backend/data/signals.json`.
 For GitHub Actions, keep `ALLOW_DEMO_DATA=false` so scheduled runs fail instead of saving fallback demo candles.
+For Vercel, set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` so the dashboard can read signals directly from Supabase.
 
 ## Safety Boundary
 
