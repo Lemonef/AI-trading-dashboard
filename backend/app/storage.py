@@ -7,6 +7,10 @@ from app.config import Settings
 from app.models import Signal
 
 
+class SignalTableMissing(RuntimeError):
+    pass
+
+
 class SignalStore:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
@@ -26,6 +30,8 @@ class SignalStore:
                 },
                 timeout=20,
             )
+            if response.status_code == 404:
+                raise SignalTableMissing("Supabase table public.signals was not found. Run backend/supabase_schema.sql in the Supabase SQL editor.")
             response.raise_for_status()
             return [Signal.model_validate(item) for item in response.json()]
 
@@ -49,6 +55,8 @@ class SignalStore:
                 json=payload,
                 timeout=20,
             )
+            if response.status_code == 404:
+                raise SignalTableMissing("Supabase table public.signals was not found. Run backend/supabase_schema.sql in the Supabase SQL editor.")
             response.raise_for_status()
             return signal
 

@@ -16,8 +16,9 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     env:
-      WATCHLIST: ${{ vars.WATCHLIST || 'BTC/USDT,ETH/USDT,SOL/USDT,BNB/USDT' }}
-      EXCHANGE_ID: ${{ vars.EXCHANGE_ID || 'binance' }}
+      WATCHLIST: ${{ vars.WATCHLIST || 'BTC/USD,ETH/USD,SOL/USD' }}
+      EXCHANGE_ID: ${{ vars.EXCHANGE_ID || 'coinbase' }}
+      FALLBACK_EXCHANGE_IDS: ${{ vars.FALLBACK_EXCHANGE_IDS || 'kraken' }}
       TIMEFRAME: ${{ vars.TIMEFRAME || '1d' }}
       OHLCV_LIMIT: ${{ vars.OHLCV_LIMIT || '260' }}
       ALLOW_DEMO_DATA: "false"
@@ -52,6 +53,7 @@ jobs:
         run: |
           echo "WATCHLIST=${WATCHLIST}"
           echo "EXCHANGE_ID=${EXCHANGE_ID}"
+          echo "FALLBACK_EXCHANGE_IDS=${FALLBACK_EXCHANGE_IDS}"
           echo "TIMEFRAME=${TIMEFRAME}"
           echo "OHLCV_LIMIT=${OHLCV_LIMIT}"
           if [ -n "${SUPABASE_URL}" ]; then echo "SUPABASE=enabled"; else echo "SUPABASE=disabled"; fi

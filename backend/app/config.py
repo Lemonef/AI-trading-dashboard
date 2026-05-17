@@ -10,6 +10,7 @@ class Settings(BaseSettings):
 
     watchlist: str = "BTC/USDT,ETH/USDT,SOL/USDT,BNB/USDT"
     exchange_id: str = "binance"
+    fallback_exchange_ids: str = "coinbase,kraken"
     timeframe: str = "1d"
     ohlcv_limit: int = 260
     allow_demo_data: bool = True
@@ -29,6 +30,16 @@ class Settings(BaseSettings):
     @property
     def symbols(self) -> list[str]:
         return [symbol.strip() for symbol in self.watchlist.split(",") if symbol.strip()]
+
+    @property
+    def exchanges(self) -> list[str]:
+        values = [self.exchange_id, *self.fallback_exchange_ids.split(",")]
+        deduped: list[str] = []
+        for value in values:
+            exchange = value.strip()
+            if exchange and exchange not in deduped:
+                deduped.append(exchange)
+        return deduped
 
 
 @lru_cache

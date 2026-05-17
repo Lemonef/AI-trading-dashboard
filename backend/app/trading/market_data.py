@@ -4,6 +4,26 @@ import ccxt
 import pandas as pd
 
 
+class MarketDataUnavailable(RuntimeError):
+    pass
+
+
+def fetch_ohlcv_with_fallback(
+    exchange_ids: list[str],
+    symbol: str,
+    timeframe: str,
+    limit: int,
+) -> tuple[pd.DataFrame, str, str]:
+    errors: list[str] = []
+    for exchange_id in exchange_ids:
+        for candidate in _symbol_candidates(symbol, exchange_id):
+            try:
+                return fetch_ohlcv(exchange_id, candidate, timeframe, limit), exchange_id, candidate
+            except Exception as exc:
+                errors.append(f"{exchange_id}:{candidate}: {exc}")
+    raise MarketDataUnavailable("; ".join(errors[-4:]))
+
+
 def fetch_ohlcv(exchange_id: str, symbol: str, timeframe: str, limit: int) -> pd.DataFrame:
     exchange_class = getattr(ccxt, exchange_id)
     exchange = exchange_class({"enableRateLimit": True})
@@ -31,3 +51,10 @@ def _to_frame(candles: list[list[float]]) -> pd.DataFrame:
     df = pd.DataFrame(candles, columns=["timestamp", "open", "high", "low", "close", "volume"])
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
     return df
+
+
+def _symbol_candidates(symbol: str, exchange_id: str) -> list[str]:
+    candidates = [symbol]
+    if symbol.endswith("/USDT") and exchange_id in {"coinbase", "kraken"}:
+        candidates.append(symbol.replace("/USDT", "/USD"))
+    return list(dict.fromkeys(candidates))

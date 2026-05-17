@@ -37,6 +37,7 @@ Copy `.env.example` to `.env` in the repo root or set these variables in your sh
 ```env
 WATCHLIST=BTC/USDT,ETH/USDT,SOL/USDT,BNB/USDT
 EXCHANGE_ID=binance
+FALLBACK_EXCHANGE_IDS=coinbase,kraken
 TIMEFRAME=1d
 OHLCV_LIMIT=260
 ALLOW_DEMO_DATA=true
