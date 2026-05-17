@@ -106,6 +106,13 @@ export default async function Home() {
               )}
             </div>
             <h2 className="mt-2.5 text-base font-semibold">{top?.symbol ?? "No signals"}</h2>
+            {top?.ai_enhanced && top.created_at && (
+              <p className="mt-0.5 text-[10px] text-zinc-400 tabular-nums">
+                AI updated {new Date(top.created_at).toLocaleString("en-US", {
+                  month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false,
+                })}
+              </p>
+            )}
             <p className="mt-1.5 text-sm leading-[1.65] text-zinc-600">
               {top?.summary ?? "Run scanner to generate first read."}
             </p>

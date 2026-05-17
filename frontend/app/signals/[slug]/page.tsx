@@ -369,10 +369,19 @@ export default async function SignalDetailPage({
             <p className="text-base font-bold text-ink">
               {verdictEmoji[signal.action]} {actionDecision[signal.action]}
             </p>
-            {signal.ai_enhanced
-              ? <span className="rounded bg-buy/10 px-1.5 py-0.5 text-[10px] font-semibold text-buy">✦ AI</span>
-              : <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400">Template summary</span>
-            }
+            <div className="flex flex-col items-end gap-0.5">
+              {signal.ai_enhanced
+                ? <span className="rounded bg-buy/10 px-1.5 py-0.5 text-[10px] font-semibold text-buy">✦ AI</span>
+                : <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400">Template</span>
+              }
+              {signal.ai_enhanced && (
+                <span className="text-[10px] text-zinc-400 tabular-nums">
+                  {new Date(signal.created_at).toLocaleString("en-US", {
+                    month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false,
+                  })}
+                </span>
+              )}
+            </div>
           </div>
           <p className="mt-1 text-sm text-zinc-600">{decisionMatrix[signal.action]}</p>
           {signal.summary && (
