@@ -43,8 +43,10 @@ export default async function Home() {
 
   const active = signals.filter((s) => s.action !== "no_trade");
   const changed = signals.filter((s) => s.changed);
-  const activeSetups = signals.filter((s) => s.action === "long_setup" || s.action === "short_setup");
-  const top = activeSetups[0] ?? active[0] ?? signals[0];
+  const activeSetups = signals
+    .filter((s) => s.action === "long_setup" || s.action === "short_setup")
+    .sort((a, b) => b.confidence - a.confidence);
+  const top = activeSetups[0] ?? [...active].sort((a, b) => b.confidence - a.confidence)[0] ?? signals[0];
   const isDemo = signals.length > 0 && signals.every((s) => s.exchange === "demo");
   const lastUpdated = signals.length > 0
     ? new Date(signals[0].created_at).toLocaleString("en-US", {
