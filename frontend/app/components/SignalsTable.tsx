@@ -28,15 +28,6 @@ function getAssetClass(symbol: string): AssetClass {
   return "Stocks";
 }
 
-function getAssetClass(symbol: string): AssetClass {
-  if (symbol.includes("/")) return "Crypto";
-  if (symbol.endsWith("=X")) return "Forex";
-  if (METAL_FUTURES.has(symbol)) return "Metals";
-  if (OIL_FUTURES.has(symbol)) return "Oil";
-  if (symbol.endsWith("=F")) return "Oil"; // catch-all futures
-  if (KNOWN_ETFS.has(symbol)) return "ETFs";
-  return "Stocks";
-}
 
 const actionLabels: Record<Signal["action"], string> = {
   long_setup: "Long setup",
