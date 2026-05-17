@@ -220,6 +220,14 @@ export default async function SignalDetailPage({
 
       <div className="mx-auto max-w-3xl px-5 py-6 space-y-5">
 
+        {/* No AI analysis banner */}
+        {!signal.ai_enhanced && (
+          <div className="flex items-center gap-3 border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-500">
+            <span>🤖</span>
+            <span>No AI analysis yet for this signal. Click <strong className="text-ink">AI Summary</strong> on the dashboard to generate.</span>
+          </div>
+        )}
+
         {/* ── Header card ─────────────────────────────────────────────────── */}
         <div className="border border-line bg-white">
           <div className="flex items-start justify-between border-b border-line px-5 py-4">
