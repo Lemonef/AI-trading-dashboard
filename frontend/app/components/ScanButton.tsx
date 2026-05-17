@@ -11,22 +11,21 @@ export default function ScanButton() {
   async function scan() {
     setState("scanning");
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      if (!apiUrl) throw new Error("NEXT_PUBLIC_API_URL not set");
-      const res = await fetch(`${apiUrl}/api/scan`, { method: "POST" });
-      if (!res.ok) throw new Error(`Scan failed: ${res.status}`);
+      const res = await fetch("/api/scan", { method: "POST" });
+      if (!res.ok) throw new Error(`${res.status}`);
       setState("done");
+      // Scanner runs async on GitHub Actions — reload after 15s to pick up new data
       setTimeout(() => {
         setState("idle");
         window.location.reload();
-      }, 1400);
+      }, 15000);
     } catch {
       setState("error");
       setTimeout(() => setState("idle"), 2000);
     }
   }
 
-  const label = { idle: "Scan Now", scanning: "Scanning…", done: "Done ✓", error: "Failed" }[state];
+  const label = { idle: "Scan Now", scanning: "Scanning…", done: "Triggered ✓", error: "Failed" }[state];
   const disabled = state === "scanning";
 
   return (
