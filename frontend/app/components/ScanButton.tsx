@@ -2,40 +2,38 @@
 
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
-
-type State = "idle" | "scanning" | "done" | "error";
+import { toast } from "sonner";
 
 export default function ScanButton() {
-  const [state, setState] = useState<State>("idle");
+  const [scanning, setScanning] = useState(false);
 
   async function scan() {
-    setState("scanning");
+    setScanning(true);
+    const id = toast.loading("Scanning markets…", { duration: Infinity });
     try {
       const res = await fetch("/api/scan", { method: "POST" });
       if (!res.ok) throw new Error(`${res.status}`);
-      setState("done");
-      // Scanner runs async on GitHub Actions — reload after 15s to pick up new data
+      toast.dismiss(id);
+      toast.success("Scan triggered! Reloading in 15s…", { duration: 15000 });
       setTimeout(() => {
-        setState("idle");
+        setScanning(false);
         window.location.reload();
       }, 15000);
     } catch {
-      setState("error");
-      setTimeout(() => setState("idle"), 2000);
+      toast.dismiss(id);
+      toast.error("Scan failed. Check GITHUB_TOKEN in Vercel env vars.");
+      setScanning(false);
     }
   }
-
-  const label = { idle: "Scan Now", scanning: "Scanning…", done: "Triggered ✓", error: "Failed" }[state];
-  const disabled = state === "scanning";
 
   return (
     <button
       onClick={scan}
-      disabled={disabled}
+      disabled={scanning}
       className="flex items-center gap-2 border border-ink bg-ink px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-40"
     >
-      <RefreshCw size={13} className={state === "scanning" ? "animate-spin" : ""} />
-      {label}
+      <RefreshCw size={13} className={scanning ? "animate-spin" : ""} />
+      {scanning ? "Scanning…" : "Scan Now"}
     </button>
   );
 }

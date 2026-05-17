@@ -51,12 +51,21 @@ class SignalStore:
         # Never overwrite ai_enhanced on upsert — managed by the summarize pipeline
         payload.pop("ai_enhanced", None)
         if self.supabase_enabled:
+            # Try upsert (requires unique constraint on symbol+timeframe)
             response = httpx.post(
-                f"{self.settings.supabase_url}/rest/v1/signals",
+                f"{self.settings.supabase_url}/rest/v1/signals?on_conflict=symbol,timeframe",
                 headers={**self._headers(), "Prefer": "resolution=merge-duplicates,return=minimal"},
                 json=payload,
                 timeout=20,
             )
+            if response.status_code == 409:
+                # Constraint not yet created — fall back to plain insert
+                response = httpx.post(
+                    f"{self.settings.supabase_url}/rest/v1/signals",
+                    headers={**self._headers(), "Prefer": "return=minimal"},
+                    json=payload,
+                    timeout=20,
+                )
             if response.status_code == 404:
                 raise SignalTableMissing("Supabase table public.signals was not found. Run backend/supabase_schema.sql in the Supabase SQL editor.")
             response.raise_for_status()

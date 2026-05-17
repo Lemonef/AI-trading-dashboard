@@ -2,44 +2,39 @@
 
 import { Sparkles } from "lucide-react";
 import { useState } from "react";
-
-type State = "idle" | "running" | "done" | "error";
+import { toast } from "sonner";
 
 export default function SummarizeButton() {
-  const [state, setState] = useState<State>("idle");
+  const [running, setRunning] = useState(false);
 
   async function run() {
-    setState("running");
+    setRunning(true);
+    const id = toast.loading("Gemini is summarizing all signals…", { duration: Infinity });
     try {
       const res = await fetch("/api/summarize", { method: "POST" });
       if (!res.ok) throw new Error(`${res.status}`);
-      setState("done");
+      toast.dismiss(id);
+      toast.success("Gemini finished! Reloading in 20s…", { duration: 20000 });
       setTimeout(() => {
-        setState("idle");
+        setRunning(false);
         window.location.reload();
       }, 20000);
     } catch {
-      setState("error");
-      setTimeout(() => setState("idle"), 2500);
+      toast.dismiss(id);
+      toast.error("Gemini summary failed. Check GitHub Actions logs.");
+      setRunning(false);
     }
   }
-
-  const label = {
-    idle: "Gemini Summaries",
-    running: "Generating…",
-    done: "Done ✓ (reloading)",
-    error: "Failed",
-  }[state];
 
   return (
     <button
       onClick={run}
-      disabled={state === "running"}
+      disabled={running}
       title="Regenerate all signal summaries using Gemini IDS-style analysis"
       className="flex items-center gap-2 border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition-colors hover:border-zinc-400 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
     >
-      <Sparkles size={13} className={state === "running" ? "animate-pulse text-amber-500" : "text-amber-500"} />
-      {label}
+      <Sparkles size={13} className={running ? "animate-pulse text-amber-500" : "text-amber-500"} />
+      {running ? "Generating…" : "Gemini Summaries"}
     </button>
   );
 }
