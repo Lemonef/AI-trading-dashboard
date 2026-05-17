@@ -10,15 +10,25 @@ class Settings(BaseSettings):
 
     watchlist: str = (
         # Crypto
-        "BTC/USDT,ETH/USDT,SOL/USDT,BNB/USDT,"
-        # US Stocks
-        "AAPL,MSFT,NVDA,TSLA,AMZN,"
-        # ETFs
-        "SPY,QQQ,XLE,XLK,"
-        # Forex
-        "EURUSD=X,GBPUSD=X,USDJPY=X,"
-        # Metals & Commodities
-        "GC=F,SI=F,CL=F"
+        "BTC/USDT,ETH/USDT,SOL/USDT,BNB/USDT,XRP/USDT,DOGE/USDT,AVAX/USDT,LINK/USDT,"
+        # US Mega-cap Tech
+        "AAPL,MSFT,NVDA,TSLA,META,GOOGL,AMZN,AMD,AVGO,QCOM,MU,ARM,PLTR,COIN,SMCI,"
+        # Broad ETFs
+        "SPY,QQQ,IWM,DIA,"
+        # Sector ETFs
+        "XLE,XLK,XLF,XLV,XLI,XLB,XLU,XLP,XLY,"
+        # Thematic & International ETFs
+        "GLD,SLV,USO,ARKK,EWY,EWT,EEM,VGK,"
+        # Precious Metals Futures
+        "GC=F,SI=F,HG=F,PL=F,PA=F,"
+        # Energy Futures
+        "CL=F,BZ=F,NG=F,"
+        # Agricultural Futures
+        "ZW=F,ZC=F,ZS=F,KC=F,"
+        # Major Forex
+        "EURUSD=X,GBPUSD=X,USDJPY=X,AUDUSD=X,USDCAD=X,USDCHF=X,NZDUSD=X,"
+        # Asian Forex
+        "USDCNH=X,USDSGD=X,USDINR=X"
     )
     exchange_id: str = "binance"
     fallback_exchange_ids: str = "coinbase,kraken"

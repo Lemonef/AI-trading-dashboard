@@ -10,11 +10,23 @@ type LivePrice = { price: number; change: number; changePct: number; name: strin
 type PriceMap = Record<string, LivePrice>;
 type SortKey = "symbol" | "confidence" | "changePct" | "trend" | "action" | "price";
 type SortDir = "asc" | "desc";
-type AssetClass = "All" | "Crypto" | "Stocks" | "ETFs" | "Forex" | "Metals" | "Oil";
+type AssetClass = "All" | "Crypto" | "Stocks" | "ETFs" | "Forex" | "Metals" | "Commodities";
 
-const KNOWN_ETFS = new Set(["SPY", "QQQ", "XLE", "XLK", "XLF", "XLV", "XLI", "XLB", "XLU", "XLP", "IWM", "VTI", "GLD", "SLV", "ARKK", "EWY", "EWT", "MTUM", "IEMG", "EFA"]);
-const METAL_FUTURES = new Set(["GC=F", "SI=F", "HG=F", "PL=F", "PA=F"]);
-const OIL_FUTURES = new Set(["CL=F", "BZ=F", "NG=F", "RB=F"]);
+const KNOWN_ETFS = new Set(["SPY","QQQ","XLE","XLK","XLF","XLV","XLI","XLB","XLU","XLP","XLY","IWM","DIA","VTI","GLD","SLV","USO","UNG","ARKK","EWY","EWT","EEM","VGK","MTUM","IEMG","EFA","FXI","VGK"]);
+const METAL_FUTURES = new Set(["GC=F","SI=F","HG=F","PL=F","PA=F"]);
+const OIL_FUTURES = new Set(["CL=F","BZ=F","NG=F","RB=F"]);
+const AGRI_FUTURES = new Set(["ZW=F","ZC=F","ZS=F","KC=F","CT=F","SB=F","OJ=F","LE=F","HE=F"]);
+
+function getAssetClass(symbol: string): AssetClass {
+  if (symbol.includes("/")) return "Crypto";
+  if (symbol.endsWith("=X")) return "Forex";
+  if (METAL_FUTURES.has(symbol)) return "Metals";
+  if (OIL_FUTURES.has(symbol)) return "Commodities";
+  if (AGRI_FUTURES.has(symbol)) return "Commodities";
+  if (symbol.endsWith("=F")) return "Commodities";
+  if (KNOWN_ETFS.has(symbol)) return "ETFs";
+  return "Stocks";
+}
 
 function getAssetClass(symbol: string): AssetClass {
   if (symbol.includes("/")) return "Crypto";
@@ -111,7 +123,7 @@ export default function SignalsTable({
 
   const availableClasses = useMemo<AssetClass[]>(() => {
     const found = new Set<AssetClass>(signals.map((s) => getAssetClass(s.symbol)));
-    const order: AssetClass[] = ["All", "Crypto", "Stocks", "ETFs", "Forex", "Metals", "Oil"];
+    const order: AssetClass[] = ["All", "Crypto", "Stocks", "ETFs", "Forex", "Metals", "Commodities"];
     return order.filter((c) => c === "All" || found.has(c));
   }, [signals]);
 

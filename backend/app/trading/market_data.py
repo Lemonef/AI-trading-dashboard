@@ -29,6 +29,44 @@ def fetch_ohlcv_yfinance(symbol: str, timeframe: str, limit: int) -> pd.DataFram
     return df.tail(limit).reset_index(drop=True)
 
 
+def fetch_ohlcv_yfinance_batch(symbols: list[str], timeframe: str, limit: int) -> dict[str, pd.DataFrame]:
+    """Download all yfinance symbols in one API call — much faster than per-symbol."""
+    import yfinance as yf
+
+    if not symbols:
+        return {}
+
+    interval_map = {"1d": "1d", "4h": "60m", "1h": "60m", "1w": "1wk", "1M": "1mo"}
+    interval = interval_map.get(timeframe, "1d")
+    period = "2y" if limit >= 200 else "1y"
+
+    raw = yf.download(
+        symbols,
+        period=period,
+        interval=interval,
+        group_by="ticker",
+        auto_adjust=True,
+        progress=False,
+        threads=True,
+    )
+
+    result: dict[str, pd.DataFrame] = {}
+    for symbol in symbols:
+        try:
+            df = raw[symbol] if len(symbols) > 1 else raw
+            if df is None or df.empty:
+                continue
+            df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
+            df.columns = pd.Index(["open", "high", "low", "close", "volume"])
+            df = df.dropna().reset_index(drop=True)
+            if len(df) >= 50:
+                result[symbol] = df.tail(limit).reset_index(drop=True)
+        except Exception:
+            pass
+
+    return result
+
+
 def fetch_ohlcv_with_fallback(
     exchange_ids: list[str],
     symbol: str,

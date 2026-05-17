@@ -4,13 +4,29 @@ from app.config import Settings
 from app.models import ScanResult, Signal
 from app.storage import SignalStore
 from app.trading.indicators import enrich_indicators
-from app.trading.market_data import demo_ohlcv, fetch_ohlcv_with_fallback, fetch_ohlcv_yfinance, is_crypto_symbol
+from app.trading.market_data import (
+    demo_ohlcv,
+    fetch_ohlcv_with_fallback,
+    fetch_ohlcv_yfinance_batch,
+    is_crypto_symbol,
+)
 from app.trading.rules import build_signal
 
 
 async def run_scan(settings: Settings) -> ScanResult:
     store = SignalStore(settings)
     signals: list[Signal] = []
+
+    # Batch download all non-crypto symbols in one API call
+    non_crypto = [s for s in settings.symbols if not is_crypto_symbol(s)]
+    yf_batch: dict = {}
+    if non_crypto:
+        print(f"Batch downloading {len(non_crypto)} yfinance symbols…")
+        try:
+            yf_batch = fetch_ohlcv_yfinance_batch(non_crypto, settings.timeframe, settings.ohlcv_limit)
+            print(f"  Got data for {len(yf_batch)}/{len(non_crypto)} symbols")
+        except Exception as e:
+            print(f"  Batch download failed ({e}) — will fetch individually")
 
     for symbol in settings.symbols:
         previous_action = store.latest_action(symbol, settings.timeframe)
@@ -22,7 +38,12 @@ async def run_scan(settings: Settings) -> ScanResult:
                     settings.timeframe,
                     settings.ohlcv_limit,
                 )
+            elif symbol in yf_batch:
+                candles = yf_batch[symbol]
+                exchange_id = "yfinance"
+                market_symbol = symbol
             else:
+                from app.trading.market_data import fetch_ohlcv_yfinance
                 candles = fetch_ohlcv_yfinance(symbol, settings.timeframe, settings.ohlcv_limit)
                 exchange_id = "yfinance"
                 market_symbol = symbol
@@ -35,9 +56,7 @@ async def run_scan(settings: Settings) -> ScanResult:
 
         enriched = enrich_indicators(candles)
         signal = build_signal(market_symbol, exchange_id, settings.timeframe, enriched, previous_action)
-        default_summary = signal.summary
         signal.summary = await summarize_signal(signal, settings)
-        signal.ai_enhanced = signal.summary != default_summary
         store.save_signal(signal)
         await send_telegram_alert(signal, settings)
         signals.append(signal)
