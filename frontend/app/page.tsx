@@ -213,8 +213,15 @@ export default async function Home() {
           )}
 
           <section className="border border-line bg-white p-4">
-            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">
-              <Brain size={12} />Top Signal
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">
+                <Brain size={12} />Top Signal
+              </div>
+              {top && (
+                top.ai_enhanced
+                  ? <span className="rounded bg-buy/10 px-1.5 py-0.5 text-[10px] font-semibold text-buy">✦ Gemini</span>
+                  : <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400">Template</span>
+              )}
             </div>
             <h2 className="mt-2.5 text-base font-semibold">{top?.symbol ?? "No signals"}</h2>
             <p className="mt-1.5 text-sm leading-[1.65] text-zinc-600">

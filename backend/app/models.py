@@ -22,6 +22,7 @@ class Signal(BaseModel):
     tp: float | None = None
     sl: float | None = None
     changed: bool = False
+    ai_enhanced: bool = False
     indicators: dict[str, float | None] = Field(default_factory=dict)
     reasons: list[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

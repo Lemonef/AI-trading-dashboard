@@ -19,6 +19,7 @@ export type Signal = {
   tp: number | null;
   sl: number | null;
   changed: boolean;
+  ai_enhanced?: boolean;
   created_at: string;
   indicators: Record<string, number | null>;
   reasons: string[];

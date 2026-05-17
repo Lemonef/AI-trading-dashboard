@@ -35,7 +35,9 @@ async def run_scan(settings: Settings) -> ScanResult:
 
         enriched = enrich_indicators(candles)
         signal = build_signal(market_symbol, exchange_id, settings.timeframe, enriched, previous_action)
+        default_summary = signal.summary
         signal.summary = await summarize_signal(signal, settings)
+        signal.ai_enhanced = signal.summary != default_summary
         store.save_signal(signal)
         await send_telegram_alert(signal, settings)
         signals.append(signal)

@@ -361,9 +361,15 @@ export default async function SignalDetailPage({
 
         {/* ── Decision box ─────────────────────────────────────────────────── */}
         <div className={`border px-5 py-4 ${verdictBoxStyle[signal.action]}`}>
-          <p className="text-base font-bold text-ink">
-            {verdictEmoji[signal.action]} {actionDecision[signal.action]}
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-base font-bold text-ink">
+              {verdictEmoji[signal.action]} {actionDecision[signal.action]}
+            </p>
+            {signal.ai_enhanced
+              ? <span className="rounded bg-buy/10 px-1.5 py-0.5 text-[10px] font-semibold text-buy">✦ Gemini AI</span>
+              : <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400">Template summary</span>
+            }
+          </div>
           <p className="mt-1 text-sm text-zinc-600">{decisionMatrix[signal.action]}</p>
           {signal.summary && (
             <p className="mt-2 text-sm leading-[1.6] text-zinc-700">{signal.summary}</p>
