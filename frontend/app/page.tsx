@@ -10,7 +10,7 @@ import {
   TrendingUp,
   Zap,
 } from "lucide-react";
-import { getSignals, symbolToSlug, type Signal } from "../lib/api";
+import { getSignals, getDailySummary, symbolToSlug, type Signal } from "../lib/api";
 import ScanButton from "./components/ScanButton";
 
 const actionLabels: Record<Signal["action"], string> = {
@@ -117,7 +117,7 @@ function MetricCard({
 }
 
 export default async function Home() {
-  const signals = await getSignals();
+  const [signals, dailySummary] = await Promise.all([getSignals(), getDailySummary()]);
   const active = signals.filter((s) => s.action !== "no_trade");
   const changed = signals.filter((s) => s.changed);
   const activeSetups = signals.filter(
@@ -238,9 +238,22 @@ export default async function Home() {
 
         {/* Sidebar */}
         <aside className="space-y-4">
+          {/* Claude daily summary */}
+          {dailySummary && (
+            <section className="border border-ink bg-ink p-4 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">
+                  <Brain size={12} />Claude Daily Brief
+                </div>
+                <span className="text-[10px] text-zinc-500 tabular-nums">{dailySummary.date}</span>
+              </div>
+              <p className="mt-2.5 text-sm leading-[1.65] text-zinc-300">{dailySummary.summary}</p>
+            </section>
+          )}
+
           <section className="border border-line bg-white p-4">
             <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">
-              <Brain size={12} />AI Summary
+              <Brain size={12} />Signal Summary
             </div>
             <h2 className="mt-2.5 text-base font-semibold">{top?.symbol ?? "No signals"}</h2>
             <p className="mt-1.5 text-sm leading-[1.65] text-zinc-600">

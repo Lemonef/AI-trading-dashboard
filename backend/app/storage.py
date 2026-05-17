@@ -66,6 +66,26 @@ class SignalStore:
         self.local_file.write_text(json.dumps([payload, *existing][:500], indent=2), encoding="utf-8")
         return signal
 
+    def save_daily_summary(self, date_str: str, summary: str, signals_count: int) -> None:
+        payload = {"date": date_str, "summary": summary, "signals_count": signals_count}
+        if self.supabase_enabled:
+            response = httpx.post(
+                f"{self.settings.supabase_url}/rest/v1/daily_summaries",
+                headers={**self._headers(), "Prefer": "resolution=merge-duplicates,return=minimal"},
+                json=payload,
+                timeout=20,
+            )
+            response.raise_for_status()
+            return
+        summary_file = Path(self.settings.data_dir) / "daily_summaries.json"
+        existing = []
+        if summary_file.exists():
+            existing = json.loads(summary_file.read_text(encoding="utf-8"))
+        existing = [e for e in existing if e.get("date") != date_str]
+        summary_file.write_text(
+            json.dumps([payload, *existing][:365], indent=2), encoding="utf-8"
+        )
+
     def _headers(self) -> dict[str, str]:
         key = self.settings.supabase_service_role_key or ""
         return {

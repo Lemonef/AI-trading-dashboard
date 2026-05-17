@@ -1,3 +1,23 @@
+-- ── Daily AI summaries ────────────────────────────────────────────────────
+create table if not exists public.daily_summaries (
+  id uuid primary key default gen_random_uuid(),
+  date date not null unique,
+  summary text not null,
+  signals_count int not null default 0,
+  created_at timestamptz not null default now()
+);
+
+alter table public.daily_summaries enable row level security;
+
+drop policy if exists "daily_summaries are publicly readable" on public.daily_summaries;
+
+create policy "daily_summaries are publicly readable"
+  on public.daily_summaries
+  for select
+  to anon, authenticated
+  using (true);
+
+-- ── Signals ───────────────────────────────────────────────────────────────
 create table if not exists public.signals (
   id uuid primary key,
   symbol text not null,

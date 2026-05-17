@@ -109,3 +109,33 @@ async function getSupabaseSignals(): Promise<Signal[]> {
     return [];
   }
 }
+
+export type DailySummary = {
+  date: string;
+  summary: string;
+  signals_count: number;
+  created_at: string;
+};
+
+export async function getDailySummary(): Promise<DailySummary | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !anonKey) return null;
+
+  try {
+    const url = new URL(`${supabaseUrl}/rest/v1/daily_summaries`);
+    url.searchParams.set("select", "*");
+    url.searchParams.set("order", "date.desc");
+    url.searchParams.set("limit", "1");
+
+    const response = await fetch(url, {
+      cache: "no-store",
+      headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+    });
+    if (!response.ok) return null;
+    const rows: DailySummary[] = await response.json();
+    return rows[0] ?? null;
+  } catch {
+    return null;
+  }
+}
