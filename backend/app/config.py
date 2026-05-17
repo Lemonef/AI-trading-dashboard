@@ -1,0 +1,36 @@
+from functools import lru_cache
+from pathlib import Path
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=(".env", "../.env", "../../.env"), extra="ignore")
+
+    watchlist: str = "BTC/USDT,ETH/USDT,SOL/USDT,BNB/USDT"
+    exchange_id: str = "binance"
+    timeframe: str = "1d"
+    ohlcv_limit: int = 260
+    allow_demo_data: bool = True
+
+    supabase_url: str | None = None
+    supabase_service_role_key: str | None = None
+
+    telegram_bot_token: str | None = None
+    telegram_chat_id: str | None = None
+
+    gemini_api_key: str | None = None
+    anthropic_api_key: str | None = None
+    claude_daily_model: str = "claude-3-5-sonnet-latest"
+
+    data_dir: Path = Field(default=Path(__file__).resolve().parents[1] / "data")
+
+    @property
+    def symbols(self) -> list[str]:
+        return [symbol.strip() for symbol in self.watchlist.split(",") if symbol.strip()]
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

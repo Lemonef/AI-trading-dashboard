@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Node / Next
+node_modules/
+.next/
+out/
+
+# Local runtime output
+*.log
+backend/data/*.json
+
+# Environment
+.env
+.env.local
