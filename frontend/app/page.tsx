@@ -5,6 +5,7 @@ import { getSignals, getWatchlist, getDailySummary, symbolToSlug, type Signal } 
 import ScanButton from "./components/ScanButton";
 import SummarizeButton from "./components/SummarizeButton";
 import SignalsTable from "./components/SignalsTable";
+import DailyReport from "./components/DailyReport";
 
 const actionLabels: Record<Signal["action"], string> = {
   long_setup: "Long setup",
@@ -92,17 +93,6 @@ export default async function Home() {
 
         {/* Sidebar */}
         <aside className="space-y-4">
-          {dailySummary && (
-            <section className="border border-ink bg-ink p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">
-                  <Brain size={12} />Daily Brief
-                </div>
-                <span className="text-[10px] text-zinc-500 tabular-nums">{dailySummary.date}</span>
-              </div>
-              <p className="mt-2.5 text-sm leading-[1.65] text-zinc-300">{dailySummary.summary}</p>
-            </section>
-          )}
 
           <section className="border border-line bg-white p-4">
             <div className="flex items-center justify-between">
@@ -180,6 +170,12 @@ export default async function Home() {
           </section>
         </aside>
       </div>
+      {/* Daily IDS Report */}
+      {dailySummary && (
+        <div className="mx-auto max-w-7xl px-5 pb-10">
+          <DailyReport summary={dailySummary.summary} date={dailySummary.date} />
+        </div>
+      )}
     </main>
   );
 }

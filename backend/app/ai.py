@@ -163,35 +163,95 @@ async def daily_strategy_summary(signals: list[Signal], settings: Settings) -> s
         return None
 
 
+def _load_skills(settings: Settings) -> str:
+    """Load IDS + DNA skill files as context for the daily report."""
+    skills_dir = settings.skills_dir
+    parts: list[str] = []
+    for name in ["Investor-Decision-Stack-SKILL.md", "Investor-DNA-SKILL.md"]:
+        path = skills_dir / name
+        if path.exists():
+            parts.append(f"# {name}\n{path.read_text(encoding='utf-8')}")
+    return "\n\n---\n\n".join(parts)
+
+
 async def _groq_daily_summary(signals: list[Signal], settings: Settings) -> str | None:
     import httpx
 
-    signal_data = [
-        f"{s.symbol}: {s.action} {s.trend} conf={round(s.confidence * 100)}% TP={s.tp} SL={s.sl}"
-        for s in signals
-    ]
-    prompt = (
-        f"Date: {date.today().isoformat()}\n"
-        "Write a daily strategic market summary from these scanner signals. "
-        "Under 180 words. Cover trend direction, strongest setups, what to watch. "
-        "Not financial advice — execution requires manual confirmation.\n\n"
-        + "\n".join(signal_data)
+    skill_context = _load_skills(settings)
+
+    # Top candidates: sort by confidence, take top 5 active setups first, then watches
+    active = sorted(
+        [s for s in signals if s.action in {"long_setup", "short_setup"}],
+        key=lambda s: s.confidence, reverse=True
     )
+    watches = sorted(
+        [s for s in signals if s.action == "watch"],
+        key=lambda s: s.confidence, reverse=True
+    )
+    candidates = (active + watches)[:7]
+
+    candidate_lines = []
+    for i, s in enumerate(candidates, 1):
+        ind = s.indicators or {}
+        candidate_lines.append(
+            f"Candidate {i}: {s.symbol} | action={s.action} | trend={s.trend} | "
+            f"confidence={round(s.confidence * 100)}% | close={s.close} | "
+            f"TP={s.tp} | SL={s.sl} | "
+            f"EMA50={ind.get('ema50')} | EMA200={ind.get('ema200')} | "
+            f"ADX={round(ind.get('adx') or 0)} | RSI={round(ind.get('rsi') or 50)} | "
+            f"MACD={ind.get('macd')} | volume_ratio={round(ind.get('volume_ratio') or 0, 1)}x | "
+            f"ATR={ind.get('atr')} | reasons: {'; '.join(s.reasons[:2])}"
+        )
+
+    prompt = f"""You are an AI trading analyst. Use the Investor Decision Stack (IDS) and Investor DNA frameworks from the skill files below.
+
+{skill_context}
+
+---
+
+TODAY: {date.today().isoformat()}
+USER DNA: {settings.investor_dna}
+
+SCANNER SIGNALS:
+{chr(10).join(candidate_lines)}
+
+ALL SIGNALS SUMMARY:
+{', '.join(f"{s.symbol}({s.action})" for s in signals)}
+
+---
+
+Generate a full IDS §11 Daily Report following the exact format from the skill files.
+Include:
+1. Macro environment read (derive from ADX/trend data across all signals)
+2. Top 3-5 candidates with full 4-layer analysis (Macro/Regime/Setup/Catalyst)
+3. Setup score /10 with progress bars for each candidate
+4. Decision box (GO/WAIT/NO TRADE) color-coded verdict
+5. Action by position state (Flat / Long low cb / Long high cb)
+6. Entry trigger + Invalidation conditions
+7. Blind-spot warning calibrated to {settings.investor_dna} DNA
+
+Use the §11 markdown format with emoji anchors (🌍🌡️🎯⚡🟢🟡🔴).
+Write in English. Include Thai phrases naturally where they add clarity (like in the examples).
+Keep each candidate analysis focused and scannable.
+End with DNA-specific strategic advice for {settings.investor_dna}."""
 
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        print(f"[Groq daily] generating §11 report for {len(candidates)} candidates…")
+        async with httpx.AsyncClient(timeout=60) as client:
             res = await client.post(
                 "https://api.groq.com/openai/v1/chat/completions",
                 headers={"Authorization": f"Bearer {settings.groq_api_key}"},
                 json={
-                    "model": "llama-3.1-8b-instant",
+                    "model": "llama-3.3-70b-versatile",
                     "messages": [{"role": "user", "content": prompt}],
-                    "max_tokens": 300,
-                    "temperature": 0.5,
+                    "max_tokens": 2000,
+                    "temperature": 0.4,
                 },
             )
             res.raise_for_status()
-            return res.json()["choices"][0]["message"]["content"].strip() or None
+            text = res.json()["choices"][0]["message"]["content"].strip()
+            print(f"[Groq daily] OK — {len(text)} chars")
+            return text or None
     except Exception as exc:
-        print(f"[Groq daily ERROR] {type(exc).__name__}: {str(exc)[:120]}")
+        print(f"[Groq daily ERROR] {type(exc).__name__}: {str(exc)[:200]}")
         return None

@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     groq_api_key: str | None = None
     anthropic_api_key: str | None = None
     claude_daily_model: str = "claude-3-5-sonnet-latest"
+    investor_dna: str = "Patient Investor (primary) + Speed Racer (secondary)"
+    skills_dir: Path = Field(default=Path(__file__).resolve().parents[2] / "skills")
 
     data_dir: Path = Field(default=Path(__file__).resolve().parents[1] / "data")
 
