@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Activity, Bell, Brain, ShieldCheck, Target, Zap } from "lucide-react";
 import { getSignals, getWatchlist, getDailySummary, symbolToSlug, type Signal } from "../lib/api";
 import ScanButton from "./components/ScanButton";
+import SummarizeButton from "./components/SummarizeButton";
 import SignalsTable from "./components/SignalsTable";
 
 const actionLabels: Record<Signal["action"], string> = {
@@ -59,7 +60,10 @@ export default async function Home() {
             <MetricCard icon={<Target size={13} />} label="Active" value={active.length} />
             <MetricCard icon={<Bell size={13} />} label="Changed" value={changed.length} />
           </div>
-          <ScanButton />
+          <div className="flex gap-2">
+            <SummarizeButton />
+            <ScanButton />
+          </div>
         </div>
       </section>
 

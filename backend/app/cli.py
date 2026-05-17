@@ -1,14 +1,44 @@
+import argparse
 import asyncio
 from datetime import date
 
-from app.ai import daily_strategy_summary
+from app.ai import daily_strategy_summary, force_summarize_signal
 from app.config import get_settings
 from app.scanner import run_scan
 from app.storage import SignalStore
 
 
 async def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--summarize", action="store_true", help="Force re-summarize latest signals with Gemini IDS-style prompt")
+    args = parser.parse_args()
+
     settings = get_settings()
+    store = SignalStore(settings)
+
+    if args.summarize:
+        print("Force-summarizing latest signals with Gemini...")
+        signals = store.list_signals(limit=100)
+        # Deduplicate — one per symbol
+        seen: set[str] = set()
+        unique = []
+        for s in signals:
+            key = f"{s.symbol}:{s.timeframe}"
+            if key not in seen:
+                seen.add(key)
+                unique.append(s)
+        print(f"Found {len(unique)} unique signals")
+        for signal in unique:
+            new_summary = await force_summarize_signal(signal, settings)
+            ai_enhanced = new_summary != signal.summary
+            if signal.id:
+                store.update_signal_summary(signal.id, new_summary, ai_enhanced)
+            label = "✦ Gemini" if ai_enhanced else "unchanged"
+            print(f"  {signal.symbol}: {label}")
+        print("Done.")
+        return
+
+    # Normal scan
     result = await run_scan(settings)
     print(f"scanned={result.scanned} changed={result.changed}")
     for signal in result.signals:
@@ -16,12 +46,10 @@ async def main() -> None:
 
     summary = await daily_strategy_summary(result.signals, settings)
     if summary:
-        SignalStore(settings).save_daily_summary(
-            date.today().isoformat(), summary, result.scanned
-        )
+        store.save_daily_summary(date.today().isoformat(), summary, result.scanned)
         print(f"daily_summary saved ({len(summary)} chars)")
     else:
-        print("daily_summary skipped (ANTHROPIC_API_KEY not set or error)")
+        print("daily_summary skipped (GEMINI_API_KEY not set or error)")
 
 
 if __name__ == "__main__":

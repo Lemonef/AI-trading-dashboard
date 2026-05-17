@@ -66,6 +66,18 @@ class SignalStore:
         self.local_file.write_text(json.dumps([payload, *existing][:500], indent=2), encoding="utf-8")
         return signal
 
+    def update_signal_summary(self, signal_id: str, summary: str, ai_enhanced: bool) -> None:
+        if self.supabase_enabled:
+            httpx.patch(
+                f"{self.settings.supabase_url}/rest/v1/signals?id=eq.{signal_id}",
+                headers={**self._headers(), "Prefer": "return=minimal"},
+                json={"summary": summary, "ai_enhanced": ai_enhanced},
+                timeout=20,
+            ).raise_for_status()
+            return
+        # local fallback: re-save full signal would require more context; skip for now
+        pass
+
     def save_daily_summary(self, date_str: str, summary: str, signals_count: int) -> None:
         payload = {"date": date_str, "summary": summary, "signals_count": signals_count}
         if self.supabase_enabled:
