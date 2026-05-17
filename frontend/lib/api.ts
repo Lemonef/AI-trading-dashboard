@@ -1,3 +1,11 @@
+export function symbolToSlug(symbol: string): string {
+  return symbol.replace(/\//g, "--");
+}
+
+export function slugToSymbol(slug: string): string {
+  return slug.replace(/--/g, "/");
+}
+
 export type Signal = {
   id?: string;
   symbol: string;

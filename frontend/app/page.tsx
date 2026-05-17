@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import {
   Activity,
   Bell,
@@ -9,7 +10,7 @@ import {
   TrendingUp,
   Zap,
 } from "lucide-react";
-import { getSignals, type Signal } from "../lib/api";
+import { getSignals, symbolToSlug, type Signal } from "../lib/api";
 import ScanButton from "./components/ScanButton";
 
 const actionLabels: Record<Signal["action"], string> = {
@@ -26,7 +27,7 @@ function toneFor(signal: Signal) {
   return "border-zinc-300 text-zinc-400";
 }
 
-function confidenceBar(signal: Signal): { pct: number; color: string } {
+function confidenceBar(signal: Signal) {
   const pct = Math.round(signal.confidence * 100);
   const color =
     signal.action === "long_setup"
@@ -103,7 +104,7 @@ function MetricCard({
   dim?: boolean;
 }) {
   return (
-    <div className="min-w-[108px] border border-line bg-white px-4 py-3">
+    <div className="min-w-[100px] border border-line bg-white px-4 py-3">
       <div className="flex items-center gap-1.5 text-xs text-zinc-500">
         {icon}
         {label}
@@ -126,34 +127,22 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen">
-      {/* ── Header ── */}
+      {/* Page header */}
       <section className="border-b border-line bg-[#F7F6F0]">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
-              AI assisted · User confirmed
-            </p>
-            <h1 className="mt-1.5 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-              Trading Signal Desk
-            </h1>
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap gap-3">
+            <MetricCard icon={<Activity size={13} />} label="Watchlist" value={signals.length} dim />
+            <MetricCard icon={<Target size={13} />} label="Active" value={active.length} />
+            <MetricCard icon={<Bell size={13} />} label="Changed" value={changed.length} />
           </div>
-
-          <div className="flex flex-col gap-3 sm:items-end">
-            <div className="flex flex-wrap gap-3">
-              <MetricCard icon={<Activity size={13} />} label="Watchlist" value={signals.length} dim />
-              <MetricCard icon={<Target size={13} />} label="Active" value={active.length} />
-              <MetricCard icon={<Bell size={13} />} label="Changed" value={changed.length} />
-            </div>
-            <ScanButton />
-          </div>
+          <ScanButton />
         </div>
       </section>
 
-      {/* ── Body ── */}
+      {/* Body */}
       <div className="mx-auto grid max-w-7xl gap-5 px-5 py-6 lg:grid-cols-[1.4fr_0.6fr]">
         {/* Signal table */}
         <div className="overflow-hidden border border-line bg-white">
-          {/* Table head */}
           <div className="grid grid-cols-[1.2fr_0.65fr_1.1fr_0.75fr] border-b border-line bg-panel px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400 md:grid-cols-[1.1fr_0.6fr_1.1fr_0.7fr_1.2fr]">
             <span>Market</span>
             <span>Trend</span>
@@ -173,17 +162,14 @@ export default async function Home() {
               const rsi = rsiBadge(signal.indicators?.rsi);
               const adx = adxBadge(signal.indicators?.adx);
               return (
-                <article
+                <Link
                   key={`${signal.symbol}-${signal.created_at}`}
-                  className="grid grid-cols-[1.2fr_0.65fr_1.1fr_0.75fr] gap-x-3 border-b border-line px-4 py-4 transition-colors hover:bg-[#FAFAF7] last:border-b-0 md:grid-cols-[1.1fr_0.6fr_1.1fr_0.7fr_1.2fr]"
+                  href={`/signals/${symbolToSlug(signal.symbol)}`}
+                  className="grid grid-cols-[1.2fr_0.65fr_1.1fr_0.75fr] gap-x-3 border-b border-line px-4 py-4 transition-colors hover:bg-[#FAFAF7] last:border-b-0 md:grid-cols-[1.1fr_0.6fr_1.1fr_0.7fr_1.2fr] cursor-pointer"
                 >
-                  {/* Symbol */}
                   <div className="flex min-w-0 items-start gap-2">
                     {signal.changed && (
-                      <span
-                        className="mt-[7px] inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-wait"
-                        title="Signal changed"
-                      />
+                      <span className="mt-[7px] inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-wait" title="Signal changed" />
                     )}
                     <div className="min-w-0">
                       <div className="truncate font-semibold leading-tight">{signal.symbol}</div>
@@ -194,31 +180,21 @@ export default async function Home() {
                     </div>
                   </div>
 
-                  {/* Trend */}
                   <div className="flex items-start gap-1.5 pt-0.5">
                     {signal.trend === "bearish" ? (
                       <TrendingDown size={15} className="mt-0.5 shrink-0 text-sell" />
                     ) : (
-                      <TrendingUp
-                        size={15}
-                        className={`mt-0.5 shrink-0 ${signal.trend === "bullish" ? "text-buy" : "text-wait"}`}
-                      />
+                      <TrendingUp size={15} className={`mt-0.5 shrink-0 ${signal.trend === "bullish" ? "text-buy" : "text-wait"}`} />
                     )}
                     <span className="text-sm capitalize text-zinc-700">{signal.trend}</span>
                   </div>
 
-                  {/* Action + confidence bar + RSI/ADX badges */}
                   <div>
-                    <span
-                      className={`inline-flex border px-2 py-0.5 text-xs font-semibold ${toneFor(signal)}`}
-                    >
+                    <span className={`inline-flex border px-2 py-0.5 text-xs font-semibold ${toneFor(signal)}`}>
                       {actionLabels[signal.action]}
                     </span>
                     <div className="mt-1.5 h-[3px] w-full max-w-[72px] overflow-hidden rounded-full bg-line">
-                      <div
-                        className={`h-full rounded-full ${color} transition-all`}
-                        style={{ width: `${pct}%` }}
-                      />
+                      <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
                     </div>
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       {rsi && (
@@ -234,7 +210,6 @@ export default async function Home() {
                     </div>
                   </div>
 
-                  {/* TP / SL */}
                   <div className="space-y-0.5 text-sm">
                     {signal.tp ? (
                       <div className="flex items-baseline gap-1">
@@ -252,37 +227,31 @@ export default async function Home() {
                     )}
                   </div>
 
-                  {/* Reason */}
                   <div className="hidden text-sm leading-5 text-zinc-600 md:block">
                     {signal.reasons.slice(0, 2).join(" · ") || signal.summary}
                   </div>
-                </article>
+                </Link>
               );
             })
           )}
         </div>
 
-        {/* ── Sidebar ── */}
+        {/* Sidebar */}
         <aside className="space-y-4">
-          {/* AI Summary */}
           <section className="border border-line bg-white p-4">
             <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">
-              <Brain size={12} />
-              AI Summary
+              <Brain size={12} />AI Summary
             </div>
             <h2 className="mt-2.5 text-base font-semibold">{top?.symbol ?? "No signals"}</h2>
             <p className="mt-1.5 text-sm leading-[1.65] text-zinc-600">
-              {top?.summary ??
-                "Run the scanner to generate the first market read."}
+              {top?.summary ?? "Run the scanner to generate the first market read."}
             </p>
           </section>
 
-          {/* Active setups list — only shown when > 1 */}
           {activeSetups.length > 1 && (
             <section className="border border-line bg-white p-4">
               <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">
-                <Zap size={12} />
-                Active Setups
+                <Zap size={12} />Active Setups
               </div>
               <ul className="mt-3 space-y-2.5">
                 {activeSetups.map((s) => (
@@ -300,7 +269,6 @@ export default async function Home() {
             </section>
           )}
 
-          {/* Indicator snapshot */}
           {top && Object.keys(top.indicators ?? {}).length > 0 && (
             <section className="border border-line bg-white p-4">
               <div className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">
@@ -312,17 +280,8 @@ export default async function Home() {
                     <dt className="text-[10px] font-medium uppercase tracking-wide text-zinc-400">
                       {indicatorDisplayName[key] ?? key}
                     </dt>
-                    <dd
-                      className={`mt-0.5 text-sm tabular-nums ${
-                        value !== null && value !== undefined
-                          ? indicatorValueColor(key, value)
-                          : "text-zinc-400"
-                      }`}
-                    >
-                      {fmt(
-                        value,
-                        key === "volume_ratio" ? 2 : key === "rsi" || key === "adx" ? 1 : 2,
-                      )}
+                    <dd className={`mt-0.5 text-sm tabular-nums ${value !== null && value !== undefined ? indicatorValueColor(key, value) : "text-zinc-400"}`}>
+                      {fmt(value, key === "volume_ratio" ? 2 : key === "rsi" || key === "adx" ? 1 : 2)}
                     </dd>
                   </div>
                 ))}
@@ -330,15 +289,12 @@ export default async function Home() {
             </section>
           )}
 
-          {/* Execution Guard */}
           <section className="border border-line bg-white p-4">
             <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">
-              <ShieldCheck size={12} />
-              Execution Guard
+              <ShieldCheck size={12} />Execution Guard
             </div>
             <p className="mt-2.5 text-sm leading-[1.65] text-zinc-600">
-              Scanner and alerts are live. Order execution is locked until a confirm button and
-              backend order review endpoint are added.
+              Scanner and alerts are live. Order execution locked until confirm button + order review endpoint are added.
             </p>
           </section>
         </aside>
