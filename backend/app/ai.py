@@ -8,17 +8,18 @@ async def summarize_signal(signal: Signal, settings: Settings) -> str:
     """Called during scan — only runs when signal.changed is True."""
     if not settings.gemini_api_key or not signal.changed:
         return signal.summary
-    return await _gemini_signal_summary(signal, settings)
+    text, _ = await _gemini_signal_summary(signal, settings)
+    return text
 
 
-async def force_summarize_signal(signal: Signal, settings: Settings) -> str:
-    """Called on demand — always runs Gemini regardless of changed status."""
+async def force_summarize_signal(signal: Signal, settings: Settings) -> tuple[str, bool]:
+    """Called on demand — always runs Gemini. Returns (summary, was_ai_generated)."""
     if not settings.gemini_api_key:
-        return signal.summary
+        return signal.summary, False
     return await _gemini_signal_summary(signal, settings)
 
 
-async def _gemini_signal_summary(signal: Signal, settings: Settings) -> str:
+async def _gemini_signal_summary(signal: Signal, settings: Settings) -> tuple[str, bool]:
     try:
         import google.generativeai as genai
 
@@ -32,22 +33,34 @@ async def _gemini_signal_summary(signal: Signal, settings: Settings) -> str:
         rsi = ind.get("rsi") or 50
         vol = ind.get("volume_ratio") or 0
 
-        prompt = f"""You are a trading analyst using the Investor Decision Stack (IDS) framework: Macro → Regime → Setup → Risk.
+        # Pre-build context strings outside f-string to avoid set-literal bug
+        ema_pos = "above" if ema50 > ema200 else "below"
+        adx_label = "strong trend" if adx >= 25 else "weak/no trend"
+        action_label = signal.action.replace("_", " ")
+        signal_json = signal.model_dump_json()
 
-Analyze this signal for {signal.symbol} and write exactly 3 sentences:
-
-1. REGIME: State the trend ({signal.trend}), EMA position (EMA50 {'above' if ema50 > ema200 else 'below'} EMA200), ADX {round(adx)} ({'strong trend' if adx >= 25 else 'weak/no trend'}), RSI {round(rsi)}.
-2. SETUP: Describe the signal ({signal.action.replace('_', ' ')}, confidence {round(signal.confidence * 100)}%). Mention key trigger conditions met or missing. Volume ratio {round(vol, 1)}x.
-3. VERDICT: State action clearly. Include TP {signal.tp} and SL {signal.sl} if set. R:R context. End with "Not financial advice — user must confirm."
-
-Rules: under 90 words total. Specific numbers only. No vague language. English only.
-
-Raw signal: {signal.model_dump_json(exclude={{'id', 'created_at'}})}"""
+        prompt = (
+            "You are a trading analyst using the Investor Decision Stack (IDS) framework: Macro → Regime → Setup → Risk.\n\n"
+            f"Analyze this signal for {signal.symbol} and write exactly 3 sentences:\n\n"
+            f"1. REGIME: State the trend ({signal.trend}), EMA position (EMA50 {ema_pos} EMA200), "
+            f"ADX {round(adx)} ({adx_label}), RSI {round(rsi)}.\n"
+            f"2. SETUP: Describe the signal ({action_label}, confidence {round(signal.confidence * 100)}%). "
+            f"Mention key trigger conditions met or missing. Volume ratio {round(vol, 1)}x.\n"
+            f"3. VERDICT: State action clearly. Include TP {signal.tp} and SL {signal.sl} if set. "
+            f"End with: 'Not financial advice — user must confirm.'\n\n"
+            "Rules: under 90 words total. Specific numbers. No vague language. English only.\n\n"
+            f"Signal data: {signal_json}"
+        )
 
         response = await model.generate_content_async(prompt)
-        return response.text.strip() or signal.summary
-    except Exception:
-        return signal.summary
+        text = response.text.strip()
+        if text:
+            return text, True
+        return signal.summary, False
+
+    except Exception as exc:
+        print(f"  [Gemini error] {signal.symbol}: {exc}")
+        return signal.summary, False
 
 
 async def daily_strategy_summary(signals: list[Signal], settings: Settings) -> str | None:

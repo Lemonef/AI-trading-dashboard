@@ -29,11 +29,10 @@ async def main() -> None:
                 unique.append(s)
         print(f"Found {len(unique)} unique signals")
         for signal in unique:
-            new_summary = await force_summarize_signal(signal, settings)
-            ai_enhanced = new_summary != signal.summary
+            new_summary, ai_enhanced = await force_summarize_signal(signal, settings)
             if signal.id:
                 store.update_signal_summary(signal.id, new_summary, ai_enhanced)
-            label = "✦ Gemini" if ai_enhanced else "unchanged"
+            label = "✦ Gemini" if ai_enhanced else "⚠ fallback (check GEMINI_API_KEY)"
             print(f"  {signal.symbol}: {label}")
         print("Done.")
         return
