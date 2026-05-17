@@ -7,8 +7,8 @@ type Strategy = "all" | "rockstar" | "sniper" | "watcher";
 
 const TABS: { value: Strategy; label: string }[] = [
   { value: "all", label: "All" },
-  { value: "rockstar", label: "🔥 Rockstar" },
   { value: "sniper", label: "🎯 Sniper" },
+  { value: "rockstar", label: "🔥 Rockstar" },
   { value: "watcher", label: "🏔️ Watcher" },
 ];
 
@@ -87,7 +87,7 @@ export default function StrategyView({ signal }: { signal: Signal }) {
       <div className="px-5 py-4 space-y-3">
         {active === "all" ? (
           // Show all three strategies
-          (["rockstar", "sniper", "watcher"] as Strategy[]).map((s) => {
+          (["sniper", "rockstar", "watcher"] as Strategy[]).map((s) => {
             const v = deriveStrategyVerdict(signal, s);
             if (!v) return null;
             const tab = TABS.find((t) => t.value === s)!;

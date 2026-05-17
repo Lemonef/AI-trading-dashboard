@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 
 const DNA_OPTIONS = [
   { value: "all", label: "All Strategies" },
-  { value: "rockstar", label: "🔥 Rockstar (Trend)" },
   { value: "sniper", label: "🎯 Sniper (Entry)" },
+  { value: "rockstar", label: "🔥 Rockstar (Trend)" },
   { value: "watcher", label: "🏔️ Watcher (Long-term)" },
 ];
 
