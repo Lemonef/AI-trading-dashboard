@@ -161,7 +161,7 @@ export default function SignalsTable({
   return (
     <div className="overflow-hidden border border-line bg-white">
       {/* Asset class filter chips */}
-      {availableClasses.length > 2 && (
+      {availableClasses.length > 1 && (
         <div className="flex flex-wrap gap-1.5 border-b border-line bg-[#F7F6F0] px-4 py-2.5">
           {availableClasses.map((cls) => (
             <button
