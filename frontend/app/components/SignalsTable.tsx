@@ -12,6 +12,7 @@ type SortKey = "symbol" | "confidence" | "changePct" | "trend" | "action" | "pri
 type SortDir = "asc" | "desc";
 type AssetClass = "All" | "Crypto" | "Stocks" | "ETFs" | "Forex" | "Metals" | "Commodities";
 
+const SPOT_METALS = new Set(["XAUUSD=X","XAGUSD=X","XPTUSD=X","XPDUSD=X"]);
 const KNOWN_ETFS = new Set(["SPY","QQQ","XLE","XLK","XLF","XLV","XLI","XLB","XLU","XLP","XLY","IWM","DIA","VTI","GLD","SLV","USO","UNG","ARKK","EWY","EWT","EEM","VGK","MTUM","IEMG","EFA","FXI","VGK"]);
 const METAL_FUTURES = new Set(["GC=F","SI=F","HG=F","PL=F","PA=F"]);
 const OIL_FUTURES = new Set(["CL=F","BZ=F","NG=F","RB=F"]);
@@ -19,6 +20,7 @@ const AGRI_FUTURES = new Set(["ZW=F","ZC=F","ZS=F","KC=F","CT=F","SB=F","OJ=F","
 
 function getAssetClass(symbol: string): AssetClass {
   if (symbol.includes("/")) return "Crypto";
+  if (SPOT_METALS.has(symbol)) return "Metals";
   if (symbol.endsWith("=X")) return "Forex";
   if (METAL_FUTURES.has(symbol)) return "Metals";
   if (OIL_FUTURES.has(symbol)) return "Commodities";
@@ -80,6 +82,7 @@ export default function SignalsTable({
   const [sortKey, setSortKey] = useState<SortKey>("action");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [filter, setFilter] = useState<AssetClass>("All");
+  const [search, setSearch] = useState("");
 
   const fetchPrices = useCallback(async () => {
     if (!signals.length) return;
@@ -119,7 +122,10 @@ export default function SignalsTable({
   }, [signals]);
 
   const sorted = useMemo(() => {
-    const base = filter === "All" ? signals : signals.filter((s) => getAssetClass(s.symbol) === filter);
+    const q = search.trim().toLowerCase();
+    const base = signals
+      .filter((s) => filter === "All" || getAssetClass(s.symbol) === filter)
+      .filter((s) => !q || s.symbol.toLowerCase().includes(q) || (prices[s.symbol]?.name ?? "").toLowerCase().includes(q));
     return [...base].sort((a, b) => {
       let cmp = 0;
       if (sortKey === "symbol") cmp = a.symbol.localeCompare(b.symbol);
@@ -187,9 +193,16 @@ export default function SignalsTable({
         </div>
       )}
 
-      {/* Sort bar */}
+      {/* Search + Sort bar */}
       <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel px-4 py-2.5">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 mr-1">Sort</span>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search symbol or name…"
+          className="h-7 rounded border border-line bg-white px-2.5 text-xs text-ink placeholder-zinc-400 outline-none focus:border-zinc-400 w-44"
+        />
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 ml-1">Sort</span>
         <SortBtn label="Signal" k="action" />
         <SortBtn label="Score" k="confidence" />
         <SortBtn label="Today %" k="changePct" />
