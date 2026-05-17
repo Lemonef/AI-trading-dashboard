@@ -9,19 +9,20 @@ export default function SummarizeButton() {
 
   async function run() {
     setRunning(true);
-    const id = toast.loading("Gemini is summarizing all signals…", { duration: Infinity });
     try {
       const res = await fetch("/api/summarize", { method: "POST" });
       if (!res.ok) throw new Error(`${res.status}`);
-      toast.dismiss(id);
-      toast.success("Gemini finished! Reloading in 20s…", { duration: 20000 });
+      // GitHub Actions dispatch returns 204 immediately — workflow runs async in background
+      toast.success("Gemini triggered — summaries updating in ~30s", {
+        duration: 30000,
+        description: "Page will reload automatically.",
+      });
       setTimeout(() => {
         setRunning(false);
         window.location.reload();
-      }, 20000);
+      }, 32000);
     } catch {
-      toast.dismiss(id);
-      toast.error("Gemini summary failed. Check GitHub Actions logs.");
+      toast.error("Failed to trigger Gemini. Check GITHUB_TOKEN in Vercel env vars.");
       setRunning(false);
     }
   }

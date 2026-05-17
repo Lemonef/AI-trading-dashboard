@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, TrendingDown, TrendingUp } from "lucide-react";
 import { getSignals, slugToSymbol, type Signal } from "../../../lib/api";
@@ -151,8 +151,12 @@ export default async function SignalDetailPage({
   const { slug } = await params;
   const symbol = slugToSymbol(slug);
   const signals = await getSignals();
-  const signal = signals.find((s) => s.symbol === symbol);
-  if (!signal) notFound();
+  // Try exact match first, then case-insensitive, then partial (handles BTC/USD vs BTC/USDT)
+  const signal =
+    signals.find((s) => s.symbol === symbol) ??
+    signals.find((s) => s.symbol.toLowerCase() === symbol.toLowerCase()) ??
+    signals.find((s) => s.symbol.split("/")[0] === symbol.split("/")[0]);
+  if (!signal) redirect("/");
 
   const analysis = deriveAnalysis(signal);
   const { bars, setupScore, layersPassed } = analysis;
