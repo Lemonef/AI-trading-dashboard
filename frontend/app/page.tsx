@@ -19,6 +19,11 @@ function toneFor(action: Signal["action"]) {
   return "border-zinc-300 text-zinc-400";
 }
 
+function fmt(v: number | null | undefined, d = 2): string {
+  if (v == null || Number.isNaN(v)) return "—";
+  return v.toLocaleString("en-US", { maximumFractionDigits: d });
+}
+
 function MetricCard({ icon, label, value, dim = false }: { icon: ReactNode; label: string; value: number; dim?: boolean }) {
   return (
     <div className="min-w-[100px] border border-line bg-white px-4 py-3">
