@@ -24,7 +24,7 @@ async def _gemini_signal_summary(signal: Signal, settings: Settings) -> tuple[st
         import google.generativeai as genai
 
         genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-2.0-flash")
 
         ind = signal.indicators or {}
         ema50 = ind.get("ema50") or 0
@@ -52,14 +52,17 @@ async def _gemini_signal_summary(signal: Signal, settings: Settings) -> tuple[st
             f"Signal data: {signal_json}"
         )
 
+        print(f"  [Gemini] calling API for {signal.symbol}…")
         response = await model.generate_content_async(prompt)
         text = response.text.strip()
         if text:
+            print(f"  [Gemini] OK — {len(text)} chars: {text[:80]}…")
             return text, True
+        print(f"  [Gemini] empty response")
         return signal.summary, False
 
     except Exception as exc:
-        print(f"  [Gemini error] {signal.symbol}: {exc}")
+        print(f"  [Gemini ERROR] {signal.symbol}: {type(exc).__name__}: {exc}")
         return signal.summary, False
 
 
