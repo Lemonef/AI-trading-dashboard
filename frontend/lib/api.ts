@@ -83,7 +83,7 @@ async function getSupabaseSignals(): Promise<Signal[]> {
     const url = new URL(`${supabaseUrl}/rest/v1/signals`);
     url.searchParams.set("select", "*");
     url.searchParams.set("order", "created_at.desc");
-    url.searchParams.set("limit", "50");
+    url.searchParams.set("limit", "200");
 
     const response = await fetch(url, {
       cache: "no-store",
