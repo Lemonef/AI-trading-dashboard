@@ -10,6 +10,21 @@ type LivePrice = { price: number; change: number; changePct: number; name: strin
 type PriceMap = Record<string, LivePrice>;
 type SortKey = "symbol" | "confidence" | "changePct" | "trend" | "action" | "price";
 type SortDir = "asc" | "desc";
+type AssetClass = "All" | "Crypto" | "Stocks" | "ETFs" | "Forex" | "Metals" | "Oil";
+
+const KNOWN_ETFS = new Set(["SPY", "QQQ", "XLE", "XLK", "XLF", "XLV", "XLI", "XLB", "XLU", "XLP", "IWM", "VTI", "GLD", "SLV", "ARKK", "EWY", "EWT", "MTUM", "IEMG", "EFA"]);
+const METAL_FUTURES = new Set(["GC=F", "SI=F", "HG=F", "PL=F", "PA=F"]);
+const OIL_FUTURES = new Set(["CL=F", "BZ=F", "NG=F", "RB=F"]);
+
+function getAssetClass(symbol: string): AssetClass {
+  if (symbol.includes("/")) return "Crypto";
+  if (symbol.endsWith("=X")) return "Forex";
+  if (METAL_FUTURES.has(symbol)) return "Metals";
+  if (OIL_FUTURES.has(symbol)) return "Oil";
+  if (symbol.endsWith("=F")) return "Oil"; // catch-all futures
+  if (KNOWN_ETFS.has(symbol)) return "ETFs";
+  return "Stocks";
+}
 
 const actionLabels: Record<Signal["action"], string> = {
   long_setup: "Long setup",
@@ -61,6 +76,7 @@ export default function SignalsTable({
   const [lastFetch, setLastFetch] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("action");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [filter, setFilter] = useState<AssetClass>("All");
 
   const fetchPrices = useCallback(async () => {
     if (!signals.length) return;
@@ -93,8 +109,15 @@ export default function SignalsTable({
     }
   }
 
+  const availableClasses = useMemo<AssetClass[]>(() => {
+    const found = new Set<AssetClass>(signals.map((s) => getAssetClass(s.symbol)));
+    const order: AssetClass[] = ["All", "Crypto", "Stocks", "ETFs", "Forex", "Metals", "Oil"];
+    return order.filter((c) => c === "All" || found.has(c));
+  }, [signals]);
+
   const sorted = useMemo(() => {
-    return [...signals].sort((a, b) => {
+    const base = filter === "All" ? signals : signals.filter((s) => getAssetClass(s.symbol) === filter);
+    return [...base].sort((a, b) => {
       let cmp = 0;
       if (sortKey === "symbol") cmp = a.symbol.localeCompare(b.symbol);
       else if (sortKey === "confidence") cmp = a.confidence - b.confidence;
@@ -112,7 +135,7 @@ export default function SignalsTable({
       else if (sortKey === "action") cmp = actionOrder[a.action] - actionOrder[b.action];
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [signals, prices, sortKey, sortDir]);
+  }, [signals, prices, sortKey, sortDir, filter]);
 
   function SortBtn({ label, k }: { label: string; k: SortKey }) {
     const active = sortKey === k;
@@ -137,6 +160,30 @@ export default function SignalsTable({
 
   return (
     <div className="overflow-hidden border border-line bg-white">
+      {/* Asset class filter chips */}
+      {availableClasses.length > 2 && (
+        <div className="flex flex-wrap gap-1.5 border-b border-line bg-[#F7F6F0] px-4 py-2.5">
+          {availableClasses.map((cls) => (
+            <button
+              key={cls}
+              onClick={() => setFilter(cls)}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                filter === cls
+                  ? "border-ink bg-ink text-white"
+                  : "border-line bg-white text-zinc-500 hover:border-zinc-400 hover:text-ink"
+              }`}
+            >
+              {cls}
+              {cls !== "All" && (
+                <span className="ml-1 opacity-60">
+                  {signals.filter((s) => getAssetClass(s.symbol) === cls).length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Sort bar */}
       <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel px-4 py-2.5">
         <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400 mr-1">Sort</span>
