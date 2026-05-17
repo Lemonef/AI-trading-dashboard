@@ -12,6 +12,38 @@ type PriceMap = Record<string, LivePrice>;
 type SortKey = "symbol" | "confidence" | "changePct" | "trend" | "action" | "price";
 type SortDir = "asc" | "desc";
 type AssetClass = "All" | "Crypto" | "Stocks" | "ETFs" | "Forex" | "Metals" | "Commodities";
+type DNA = "all" | "rockstar" | "sniper" | "watcher";
+
+function strategyVerdict(signal: Signal, dna: DNA): { label: string; color: string } | null {
+  if (dna === "all") return null;
+  const ind = signal.indicators ?? {};
+  const adx = ind.adx ?? 0;
+  const rsi = ind.rsi ?? 50;
+  const vol = ind.volume_ratio ?? 0;
+
+  if (dna === "rockstar") {
+    if (signal.trend === "bullish" && adx >= 25) return { label: "🔥 GO Long", color: "border-buy text-buy" };
+    if (signal.trend === "bullish") return { label: "🔥 Wait ADX", color: "border-wait text-wait" };
+    if (signal.trend === "bearish" && adx >= 25) return { label: "🔥 GO Short", color: "border-sell text-sell" };
+    if (signal.trend === "bearish") return { label: "🔥 Wait ADX", color: "border-wait text-wait" };
+    return { label: "🔥 No trend", color: "border-zinc-300 text-zinc-400" };
+  }
+  if (dna === "sniper") {
+    if ((signal.action === "long_setup" || signal.action === "short_setup") && vol >= 1.3)
+      return { label: "🎯 FIRE", color: "border-buy text-buy" };
+    if (signal.action === "long_setup" || signal.action === "short_setup")
+      return { label: "🎯 Low vol", color: "border-wait text-wait" };
+    if (signal.action === "watch") return { label: "🎯 Watch", color: "border-wait text-wait" };
+    return { label: "🎯 No trigger", color: "border-zinc-300 text-zinc-400" };
+  }
+  if (dna === "watcher") {
+    if (signal.trend === "bullish" && rsi < 35) return { label: "🏔️ Accumulate", color: "border-buy text-buy" };
+    if (signal.trend === "bullish") return { label: "🏔️ Hold", color: "border-buy text-buy" };
+    if (signal.trend === "bearish") return { label: "🏔️ Avoid", color: "border-sell text-sell" };
+    return { label: "🏔️ Monitor", color: "border-zinc-300 text-zinc-400" };
+  }
+  return null;
+}
 
 const SPOT_METALS = new Set(["XAUUSD=X","XAGUSD=X","XPTUSD=X","XPDUSD=X"]);
 const KNOWN_ETFS = new Set(["SPY","QQQ","XLE","XLK","XLF","XLV","XLI","XLB","XLU","XLP","XLY","IWM","DIA","VTI","GLD","SLV","USO","UNG","ARKK","EWY","EWT","EEM","VGK","MTUM","IEMG","EFA","FXI","VGK"]);
@@ -81,10 +113,18 @@ export default function SignalsTable({
   const [fetching, setFetching] = useState(false);
   const [lastFetch, setLastFetch] = useState<string | null>(null);
   const router = useRouter();
+  const [dna, setDna] = useState<DNA>("all");
   const [sortKey, setSortKey] = useState<SortKey>("action");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [filter, setFilter] = useState<AssetClass>("All");
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    setDna((localStorage.getItem("investor_dna") as DNA) ?? "all");
+    const onStorage = () => setDna((localStorage.getItem("investor_dna") as DNA) ?? "all");
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   const fetchPrices = useCallback(async () => {
     if (!signals.length) return;
@@ -278,11 +318,16 @@ export default function SignalsTable({
                 <span className="text-xs capitalize text-zinc-600">{signal.trend}</span>
               </div>
 
-              {/* Signal + confidence */}
+              {/* Signal + confidence — changes with DNA selector */}
               <div>
-                <span className={`inline-flex border px-2 py-0.5 text-[11px] font-semibold ${toneFor(signal.action)}`}>
-                  {actionLabels[signal.action]}
-                </span>
+                {(() => {
+                  const sv = strategyVerdict(signal, dna);
+                  return sv ? (
+                    <span className={`inline-flex border px-2 py-0.5 text-[11px] font-semibold ${sv.color}`}>{sv.label}</span>
+                  ) : (
+                    <span className={`inline-flex border px-2 py-0.5 text-[11px] font-semibold ${toneFor(signal.action)}`}>{actionLabels[signal.action]}</span>
+                  );
+                })()}
                 <div className="mt-1 text-[10px] text-zinc-400 tabular-nums">
                   {Math.round(signal.confidence * 100)}%
                 </div>

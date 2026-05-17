@@ -20,6 +20,7 @@ export default function DnaSelector() {
   function onChange(val: string) {
     setSelected(val);
     localStorage.setItem("investor_dna", val);
+    window.dispatchEvent(new StorageEvent("storage", { key: "investor_dna", newValue: val }));
   }
 
   return (
