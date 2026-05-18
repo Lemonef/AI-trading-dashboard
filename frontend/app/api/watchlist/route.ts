@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json(); // { symbol, exchange, timeframe, session_id? }
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/watchlist`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/watchlist?on_conflict=symbol,session_id`, {
     method: "POST",
     headers: { ...headers(), Prefer: "resolution=merge-duplicates,return=minimal" },
     body: JSON.stringify(body),
