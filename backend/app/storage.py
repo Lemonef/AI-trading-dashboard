@@ -211,7 +211,7 @@ class SignalStore:
         }
         if self.supabase_enabled:
             response = httpx.post(
-                f"{self.settings.supabase_url}/rest/v1/daily_summaries",
+                f"{self.settings.supabase_url}/rest/v1/daily_summaries?on_conflict=date",
                 headers={**self._headers(), "Prefer": "resolution=merge-duplicates,return=minimal"},
                 json=payload,
                 timeout=20,
