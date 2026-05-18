@@ -1,5 +1,5 @@
 from app.ai import summarize_signal
-from app.alerts import _fmt, handle_bot_commands, send_alert_batch, send_daily_digest, send_price_alert_hit
+from app.alerts import _fmt, handle_bot_commands, register_bot_commands, send_alert_batch, send_daily_digest, send_price_alert_hit
 from app.config import Settings
 from app.models import ScanResult, Signal
 from app.storage import SignalStore
@@ -71,7 +71,8 @@ async def run_scan(settings: Settings) -> ScanResult:
         store.save_signal(signal)
         signals.append(signal)
 
-    # Handle /myid bot command
+    # Register bot commands + handle /myid
+    await register_bot_commands(settings)
     await handle_bot_commands(settings)
 
     # Send per-user watchlist alerts

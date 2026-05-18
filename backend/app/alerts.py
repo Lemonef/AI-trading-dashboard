@@ -35,6 +35,22 @@ async def send_telegram_alert(signal: Signal, settings: Settings) -> None:
         await client.post(url, json={"chat_id": settings.telegram_chat_id, "text": message})
 
 
+async def register_bot_commands(settings: Settings) -> None:
+    """Set bot command list visible when user types / in chat."""
+    if not settings.telegram_bot_token:
+        return
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            await client.post(
+                f"https://api.telegram.org/bot{settings.telegram_bot_token}/setMyCommands",
+                json={"commands": [
+                    {"command": "myid", "description": "Get your Chat ID for Setup Alerts"},
+                ]},
+            )
+    except Exception:
+        pass
+
+
 async def handle_bot_commands(settings: Settings) -> None:
     """Poll for /myid command, reply with chat ID, acknowledge all updates."""
     if not settings.telegram_bot_token:
