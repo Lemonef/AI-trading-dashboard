@@ -36,33 +36,49 @@ async def send_telegram_alert(signal: Signal, settings: Settings) -> None:
 
 
 async def handle_bot_commands(settings: Settings) -> None:
-    """Poll for /myid command and reply with the user's chat ID."""
+    """Poll for /myid command, reply with chat ID, acknowledge all updates."""
     if not settings.telegram_bot_token:
         return
     try:
         url_base = f"https://api.telegram.org/bot{settings.telegram_bot_token}"
-        # Get recent updates
-        async with httpx.AsyncClient(timeout=10) as client:
-            res = await client.get(f"{url_base}/getUpdates", params={"timeout": 1, "limit": 10})
+        async with httpx.AsyncClient(timeout=15) as client:
+            res = await client.get(f"{url_base}/getUpdates", params={"limit": 50, "timeout": 1})
             if not res.is_success:
                 return
             updates = res.json().get("result", [])
+            if not updates:
+                return
+
+            max_update_id = 0
             for update in updates:
+                update_id = update.get("update_id", 0)
+                if update_id > max_update_id:
+                    max_update_id = update_id
+
                 msg = update.get("message", {})
-                text = msg.get("text", "")
+                text = (msg.get("text") or "").strip().lower()
                 chat_id = msg.get("chat", {}).get("id")
-                if chat_id and text.strip().startswith("/myid"):
+
+                if chat_id and text.startswith("/myid"):
+                    first_name = msg.get("from", {}).get("first_name", "")
+                    greeting = f"Hi {first_name}! " if first_name else ""
                     await client.post(f"{url_base}/sendMessage", json={
                         "chat_id": chat_id,
                         "text": (
-                            f"🤖 Your Telegram Chat ID is:\n\n"
+                            f"🤖 {greeting}Your Telegram Chat ID is:\n\n"
                             f"`{chat_id}`\n\n"
-                            f"Copy this number and paste it into the Trading Signal Desk → Setup Alerts."
+                            f"Copy this number → open Trading Signal Desk → click **Setup alerts** → paste it in."
                         ),
                         "parse_mode": "Markdown",
                     })
-    except Exception:
-        pass
+
+            # Acknowledge — marks all updates as read so they don't re-process
+            await client.get(
+                f"{url_base}/getUpdates",
+                params={"offset": max_update_id + 1, "limit": 1, "timeout": 1},
+            )
+    except Exception as e:
+        print(f"[bot] handle_bot_commands error: {e}")
 
 
 async def send_price_alert_hit(alert: dict, price: float, level: str, settings: Settings) -> None:
