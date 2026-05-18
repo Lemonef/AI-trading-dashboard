@@ -26,9 +26,9 @@ export default function AutoSetup() {
         body: JSON.stringify({ id: sessionId, telegram_chat_id: telegramId }),
       });
 
-      toast.success(`Telegram connected! Chat ID: ${telegramId}`, { duration: 5000 });
-      // Remove ?setup= from URL
-      router.replace("/");
+      toast.success(`Telegram connected! ✓`, { duration: 3000 });
+      // Full reload so UserSetup reflects new session
+      setTimeout(() => { window.location.href = "/"; }, 1000);
     }
 
     doSetup();
