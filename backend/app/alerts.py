@@ -78,10 +78,10 @@ async def handle_bot_commands(settings: Settings) -> None:
                 text = (msg.get("text") or "").strip().lower()
                 chat_id = msg.get("chat", {}).get("id")
 
-                # Skip messages older than 35 min — prevents duplicate replies across runner restarts
+                # Skip messages older than 2 hours — offset acknowledgement handles true duplicates
                 msg_ts = msg.get("date", 0)
                 msg_age = now_utc - datetime.fromtimestamp(msg_ts, tz=timezone.utc)
-                if msg_age.total_seconds() > 35 * 60:
+                if msg_age.total_seconds() > 2 * 3600:
                     continue
 
                 if chat_id and text.startswith("/myid"):
