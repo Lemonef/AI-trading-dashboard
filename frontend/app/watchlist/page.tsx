@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getSignals, getWatchlist } from "../../lib/api";
 import ScanButton from "../components/ScanButton";
 import WatchlistCard from "../components/WatchlistCard";
