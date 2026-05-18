@@ -49,6 +49,9 @@ async def handle_bot_commands(settings: Settings) -> None:
             if not updates:
                 return
 
+            from datetime import datetime, timezone, timedelta
+            now_utc = datetime.now(timezone.utc)
+
             max_update_id = 0
             for update in updates:
                 update_id = update.get("update_id", 0)
@@ -58,6 +61,12 @@ async def handle_bot_commands(settings: Settings) -> None:
                 msg = update.get("message", {})
                 text = (msg.get("text") or "").strip().lower()
                 chat_id = msg.get("chat", {}).get("id")
+
+                # Skip messages older than 35 min — prevents duplicate replies across runner restarts
+                msg_ts = msg.get("date", 0)
+                msg_age = now_utc - datetime.fromtimestamp(msg_ts, tz=timezone.utc)
+                if msg_age.total_seconds() > 35 * 60:
+                    continue
 
                 if chat_id and text.startswith("/myid"):
                     first_name = msg.get("from", {}).get("first_name", "")

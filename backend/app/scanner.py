@@ -86,8 +86,9 @@ async def run_scan(settings: Settings) -> ScanResult:
             user_settings = settings.model_copy(update={"telegram_chat_id": user_chat_id})
             await send_alert_batch(user_alerts, user_settings)
 
-    # Check custom price alerts
+    # Check custom price alerts — route to each user's own Telegram chat ID
     price_map = {s.symbol: s.close for s in signals}
+    session_chat_map = {g["session_id"]: g["telegram_chat_id"] for g in user_groups if g.get("session_id")}
     price_alerts = store.list_price_alerts(active_only=True)
     for alert in price_alerts:
         price = price_map.get(alert["symbol"])
@@ -104,7 +105,11 @@ async def run_scan(settings: Settings) -> ScanResult:
         elif entry and price <= entry:
             triggered = f"📍 Entry {_fmt(entry)} reached — price {_fmt(price)} ≤ entry zone"
         if triggered:
-            await send_price_alert_hit(alert, price, triggered, settings)
+            # Send to the user who created the alert, not global chat
+            alert_session = alert.get("session_id")
+            user_chat_id = session_chat_map.get(alert_session) or settings.telegram_chat_id
+            alert_settings = settings.model_copy(update={"telegram_chat_id": user_chat_id})
+            await send_price_alert_hit(alert, price, triggered, alert_settings)
             store.trigger_price_alert(alert["id"])
 
     return ScanResult(
