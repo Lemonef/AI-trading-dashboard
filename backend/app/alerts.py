@@ -35,33 +35,48 @@ async def send_telegram_alert(signal: Signal, settings: Settings) -> None:
         await client.post(url, json={"chat_id": settings.telegram_chat_id, "text": message})
 
 
-async def send_daily_digest(signals: list[Signal], summary: str | None, settings: Settings) -> None:
-    """Morning digest — sent once per day from the scanner."""
+async def send_daily_digest(signals: list[Signal], summary: str | None, settings: Settings, watchlist: set[str] | None = None) -> None:
+    """Morning digest — 07:00 Bangkok. Watchlist first, then top overall."""
     if not settings.telegram_bot_token or not settings.telegram_chat_id:
         return
 
-    active = [s for s in signals if s.action in {"long_setup", "short_setup"}]
-    watches = [s for s in signals if s.action == "watch"]
+    from datetime import date as _date
+    lines = [f"🌅 *Good morning — Daily Signal Digest*", f"_{_date.today().strftime('%d %b %Y')} · Thailand time_\n"]
 
-    lines = ["📊 *Daily Market Digest*\n"]
+    # Watchlist signals first
+    if watchlist:
+        wl_active = sorted(
+            [s for s in signals if s.symbol in watchlist and s.action in {"long_setup", "short_setup"}],
+            key=lambda x: x.confidence, reverse=True
+        )
+        wl_watch = sorted(
+            [s for s in signals if s.symbol in watchlist and s.action == "watch"],
+            key=lambda x: x.confidence, reverse=True
+        )
+        if wl_active or wl_watch:
+            lines.append("👀 *Your Watchlist*")
+            for s in (wl_active + wl_watch)[:4]:
+                emoji = "🟢" if s.action == "long_setup" else "🔴" if s.action == "short_setup" else "🟡"
+                tp_sl = f"TP {_fmt(s.tp)} · SL {_fmt(s.sl)}" if s.tp else "No levels"
+                lines.append(f"{emoji} *{s.symbol}* · {s.action.replace('_', ' ')} · {round(s.confidence * 100)}%\n   {tp_sl}")
+        else:
+            lines.append("👀 *Your Watchlist*\nNo active signals on watchlist today.")
 
-    if active:
-        lines.append(f"🔥 *Active Setups ({len(active)})*")
-        for s in sorted(active, key=lambda x: x.confidence, reverse=True)[:5]:
+    # Top 2-3 overall active setups (outside watchlist)
+    all_active = sorted(
+        [s for s in signals if s.action in {"long_setup", "short_setup"} and (not watchlist or s.symbol not in watchlist)],
+        key=lambda x: x.confidence, reverse=True
+    )[:3]
+    if all_active:
+        lines.append("\n🔥 *Top Market Setups*")
+        for s in all_active:
             emoji = "🟢" if s.action == "long_setup" else "🔴"
-            lines.append(f"{emoji} {s.symbol} · {s.action.replace('_', ' ')} · {round(s.confidence * 100)}% · TP {_fmt(s.tp)} SL {_fmt(s.sl)}")
-    else:
-        lines.append("No active setups today.")
-
-    if watches:
-        lines.append(f"\n👀 *Watching ({len(watches)})*")
-        for s in sorted(watches, key=lambda x: x.confidence, reverse=True)[:5]:
-            lines.append(f"🟡 {s.symbol} · {round(s.confidence * 100)}%")
+            lines.append(f"{emoji} *{s.symbol}* · {round(s.confidence * 100)}% · TP {_fmt(s.tp)} · SL {_fmt(s.sl)}")
 
     if summary:
         lines.append(f"\n🤖 *AI Brief*\n{summary[:400]}{'…' if len(summary) > 400 else ''}")
 
-    lines.append("\n⚠️ Manual confirmation required before execution.")
+    lines.append("\n⚠️ _Manual confirmation required before execution._")
 
     message = "\n".join(lines)
     url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage"

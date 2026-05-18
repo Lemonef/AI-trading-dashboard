@@ -1,5 +1,5 @@
 from app.ai import summarize_signal
-from app.alerts import send_telegram_alert
+from app.alerts import send_daily_digest, send_telegram_alert
 from app.config import Settings
 from app.models import ScanResult, Signal
 from app.storage import SignalStore
@@ -17,6 +17,10 @@ async def run_scan(settings: Settings) -> ScanResult:
     store = SignalStore(settings)
     signals: list[Signal] = []
 
+    # Fetch watchlist — alerts only fire for these symbols
+    watchlist = store.list_watchlist()
+    print(f"Watchlist: {len(watchlist)} symbols")
+
     # Batch download all non-crypto symbols in one API call
     non_crypto = [s for s in settings.symbols if not is_crypto_symbol(s)]
     yf_batch: dict = {}
@@ -30,6 +34,7 @@ async def run_scan(settings: Settings) -> ScanResult:
 
     for symbol in settings.symbols:
         previous_action = store.latest_action(symbol, settings.timeframe)
+        previous_trend = store.latest_trend(symbol, settings.timeframe)
         try:
             if is_crypto_symbol(symbol):
                 candles, exchange_id, market_symbol = fetch_ohlcv_with_fallback(
@@ -60,14 +65,17 @@ async def run_scan(settings: Settings) -> ScanResult:
         if len(enriched) < 2:
             print(f"  Skipping {market_symbol} — insufficient data ({len(enriched)} rows)")
             continue
-        signal = build_signal(market_symbol, exchange_id, settings.timeframe, enriched, previous_action)
+
+        signal = build_signal(market_symbol, exchange_id, settings.timeframe, enriched, previous_action, previous_trend)
         signal.summary = await summarize_signal(signal, settings)
         store.save_signal(signal)
-        await send_telegram_alert(signal, settings)
+        # Alert only if symbol is in watchlist AND (action or trend changed)
+        if symbol in watchlist and (signal.changed or signal.trend_changed):
+            await send_telegram_alert(signal, settings)
         signals.append(signal)
 
     return ScanResult(
         scanned=len(signals),
-        changed=sum(1 for signal in signals if signal.changed),
+        changed=sum(1 for signal in signals if signal.changed or signal.trend_changed),
         signals=signals,
     )

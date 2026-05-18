@@ -46,6 +46,28 @@ class SignalStore:
                 return signal.action
         return None
 
+    def latest_trend(self, symbol: str, timeframe: str) -> str | None:
+        for signal in self.list_signals(limit=200):
+            if signal.symbol == symbol and signal.timeframe == timeframe:
+                return signal.trend
+        return None
+
+    def list_watchlist(self) -> set[str]:
+        if not self.supabase_enabled:
+            return set()
+        try:
+            response = httpx.get(
+                f"{self.settings.supabase_url}/rest/v1/watchlist",
+                headers=self._headers(),
+                params={"select": "symbol"},
+                timeout=20,
+            )
+            if not response.is_success:
+                return set()
+            return {row["symbol"] for row in response.json()}
+        except Exception:
+            return set()
+
     def save_signal(self, signal: Signal) -> Signal:
         payload = signal.model_dump(mode="json")
         # Never overwrite ai_enhanced on upsert — managed by the summarize pipeline

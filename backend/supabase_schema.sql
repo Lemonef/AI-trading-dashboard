@@ -51,6 +51,7 @@ create table if not exists public.signals (
   tp numeric,
   sl numeric,
   changed boolean not null default false,
+  trend_changed boolean not null default false,
   indicators jsonb not null default '{}'::jsonb,
   reasons jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now()

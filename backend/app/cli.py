@@ -64,7 +64,8 @@ async def main() -> None:
     force_digest = os.environ.get("FORCE_DIGEST", "") == "1"
     if utc_hour == 0 or force_digest:
         print("Sending morning digest to Telegram…")
-        await send_daily_digest(result.signals, summary, settings)
+        watchlist = SignalStore(settings).list_watchlist()
+        await send_daily_digest(result.signals, summary, settings, watchlist)
         print("Digest sent.")
 
 

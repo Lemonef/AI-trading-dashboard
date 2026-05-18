@@ -5,7 +5,7 @@ import pandas as pd
 from app.models import Action, Signal, Trend
 
 
-def build_signal(symbol: str, exchange: str, timeframe: str, enriched: pd.DataFrame, previous_action: str | None) -> Signal:
+def build_signal(symbol: str, exchange: str, timeframe: str, enriched: pd.DataFrame, previous_action: str | None, previous_trend: str | None = None) -> Signal:
     latest = enriched.iloc[-1]
     prior = enriched.iloc[-2]
     trend = _trend(latest)
@@ -15,6 +15,7 @@ def build_signal(symbol: str, exchange: str, timeframe: str, enriched: pd.DataFr
     tp, sl = _risk_levels(close, atr, action)
     confidence = _confidence(latest, trend, action)
     changed = previous_action is not None and previous_action != action
+    trend_changed = previous_trend is not None and previous_trend != trend
 
     return Signal(
         symbol=symbol,
@@ -28,6 +29,7 @@ def build_signal(symbol: str, exchange: str, timeframe: str, enriched: pd.DataFr
         tp=tp,
         sl=sl,
         changed=changed,
+        trend_changed=trend_changed,
         indicators={
             "ema50": _num(latest.get("ema50")),
             "ema200": _num(latest.get("ema200")),
