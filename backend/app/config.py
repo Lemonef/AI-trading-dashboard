@@ -12,7 +12,7 @@ class Settings(BaseSettings):
         # Crypto
         "BTC/USDT,ETH/USDT,SOL/USDT,BNB/USDT,XRP/USDT,DOGE/USDT,AVAX/USDT,LINK/USDT,"
         # US Mega-cap Tech
-        "AAPL,MSFT,NVDA,TSLA,META,GOOGL,AMZN,AMD,AVGO,QCOM,MU,ARM,PLTR,COIN,SMCI,"
+        "AAPL,MSFT,NVDA,TSLA,META,GOOGL,AMZN,AMD,AVGO,QCOM,MU,ARM,PLTR,COIN,SMCI,INTC,NOW,"
         # Broad ETFs
         "SPY,QQQ,IWM,DIA,"
         # Sector ETFs
