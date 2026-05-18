@@ -98,11 +98,11 @@ async def run_scan(settings: Settings) -> ScanResult:
         entry = alert.get("entry")
         triggered = None
         if tp and price >= tp:
-            triggered = f"TP {_fmt(tp)} reached (price: {_fmt(price)})"
+            triggered = f"🎯 TP {_fmt(tp)} hit — price {_fmt(price)} ≥ target"
         elif sl and price <= sl:
-            triggered = f"SL {_fmt(sl)} hit (price: {_fmt(price)})"
-        elif entry and abs(price - entry) / entry < 0.005:
-            triggered = f"Entry zone {_fmt(entry)} reached (price: {_fmt(price)})"
+            triggered = f"🛑 SL {_fmt(sl)} hit — price {_fmt(price)} ≤ stop"
+        elif entry and price <= entry:
+            triggered = f"📍 Entry {_fmt(entry)} reached — price {_fmt(price)} ≤ entry zone"
         if triggered:
             await send_price_alert_hit(alert, price, triggered, settings)
             store.trigger_price_alert(alert["id"])
