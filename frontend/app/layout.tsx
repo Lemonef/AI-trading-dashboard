@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Suspense } from "react";
 import { Toaster } from "sonner";
 import Nav from "./components/Nav";
 import UserSetup from "./components/UserSetup";
+import AutoSetup from "./components/AutoSetup";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -35,6 +37,7 @@ export default function RootLayout({
           </div>
         </header>
         <Nav />
+        <Suspense><AutoSetup /></Suspense>
         {children}
         <Toaster position="bottom-right" richColors closeButton />
       </body>

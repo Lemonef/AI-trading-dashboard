@@ -109,8 +109,9 @@ export default function UserSetup() {
               <div className="mt-1.5 space-y-0.5 text-[10px] text-zinc-500 bg-zinc-50 border border-zinc-200 rounded px-2.5 py-2">
                 <p className="font-semibold text-zinc-600">How to get your ID:</p>
                 <p>1. Open Telegram → search <strong>@Lemontradeaibot</strong></p>
-                <p>2. Tap <strong>Start</strong> then send <strong>/myid</strong></p>
-                <p>3. Bot replies with your number → paste it above</p>
+                <p>2. Tap <strong>Start</strong> then send <strong>/setup</strong></p>
+                <p>3. Tap the link the bot sends → auto-connects instantly</p>
+                <p className="text-zinc-400">Or send /myid and paste the number above manually</p>
               </div>
             </div>
             <button

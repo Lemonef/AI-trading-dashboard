@@ -44,7 +44,8 @@ async def register_bot_commands(settings: Settings) -> None:
             await client.post(
                 f"https://api.telegram.org/bot{settings.telegram_bot_token}/setMyCommands",
                 json={"commands": [
-                    {"command": "myid", "description": "Get your Chat ID for Setup Alerts"},
+                    {"command": "setup", "description": "Connect Telegram to Trading Signal Desk"},
+                    {"command": "myid", "description": "Get your Chat ID"},
                 ]},
             )
     except Exception:
