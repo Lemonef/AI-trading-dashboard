@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, Trash2, Save, X, Plus, CheckCircle } from "lucide-react";
+import { Bell, Trash2, Save, X, Plus, CheckCircle, Pencil } from "lucide-react";
 import type { PriceAlert } from "../../lib/api";
 
 type Form = { entry: string; tp: string; sl: string; note: string };
@@ -24,6 +24,8 @@ export default function AlertPanel({
   const [allAlerts, setAllAlerts] = useState<PriceAlert[]>([]);
   const [form, setForm] = useState<Form>(EMPTY_FORM);
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<Form>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -78,6 +80,41 @@ export default function AlertPanel({
     setAllAlerts((prev) => prev.filter((a) => a.id !== id));
   }
 
+  function startEdit(a: PriceAlert) {
+    setEditingId(a.id);
+    setEditForm({
+      entry: a.entry?.toString() ?? "",
+      tp: a.tp?.toString() ?? "",
+      sl: a.sl?.toString() ?? "",
+      note: a.note ?? "",
+    });
+    setAdding(false);
+  }
+
+  async function saveEdit(id: string) {
+    const ef = editForm;
+    if (!ef.entry && !ef.tp && !ef.sl) return;
+    setSaving(true);
+    try {
+      await fetch(`/api/alerts?id=${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          entry: ef.entry ? parseFloat(ef.entry) : null,
+          tp: ef.tp ? parseFloat(ef.tp) : null,
+          sl: ef.sl ? parseFloat(ef.sl) : null,
+          note: ef.note || null,
+          active: true,
+          triggered_at: null,
+        }),
+      });
+      setEditingId(null);
+      await loadAlerts(sessionId);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="border border-line bg-white shadow-md">
       {/* Header */}
@@ -103,27 +140,74 @@ export default function AlertPanel({
             {allAlerts.length > 0 && (
               <div className="divide-y divide-line">
                 {allAlerts.map((a) => (
-                  <div key={a.id} className="flex items-start gap-2 px-4 py-2.5">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-semibold text-ink">{a.symbol}</span>
-                        {a.triggered_at && (
-                          <span title="Triggered"><CheckCircle size={11} className="text-buy" /></span>
-                        )}
+                  <div key={a.id}>
+                    {/* Alert row */}
+                    <div className="flex items-start gap-2 px-4 py-2.5">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-semibold text-ink">{a.symbol}</span>
+                          {a.triggered_at && (
+                            <span title="Triggered"><CheckCircle size={11} className="text-buy" /></span>
+                          )}
+                        </div>
+                        <div className="mt-0.5 flex flex-wrap gap-x-3 text-[10px] text-zinc-500">
+                          {a.entry != null && <span>Entry {fmt(a.entry)}</span>}
+                          {a.tp != null && <span className="text-buy">TP {fmt(a.tp)}</span>}
+                          {a.sl != null && <span className="text-sell">SL {fmt(a.sl)}</span>}
+                          {a.note && <span className="text-zinc-400 italic">{a.note}</span>}
+                        </div>
                       </div>
-                      <div className="mt-0.5 flex flex-wrap gap-x-3 text-[10px] text-zinc-500">
-                        {a.entry != null && <span>Entry {fmt(a.entry)}</span>}
-                        {a.tp != null && <span className="text-buy">TP {fmt(a.tp)}</span>}
-                        {a.sl != null && <span className="text-sell">SL {fmt(a.sl)}</span>}
-                        {a.note && <span className="text-zinc-400 italic">{a.note}</span>}
+                      <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                        <button
+                          onClick={() => editingId === a.id ? setEditingId(null) : startEdit(a)}
+                          className={`text-zinc-300 hover:text-ink ${editingId === a.id ? "text-ink" : ""}`}
+                        >
+                          <Pencil size={12} />
+                        </button>
+                        <button onClick={() => remove(a.id)} className="text-zinc-300 hover:text-sell">
+                          <Trash2 size={13} />
+                        </button>
                       </div>
                     </div>
-                    <button
-                      onClick={() => remove(a.id)}
-                      className="mt-0.5 shrink-0 text-zinc-300 hover:text-sell"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+
+                    {/* Inline edit form */}
+                    {editingId === a.id && (
+                      <div className="border-t border-line bg-panel px-4 py-3 space-y-2">
+                        {[
+                          { key: "entry", label: "Entry ≤", color: "text-ink" },
+                          { key: "tp", label: "TP ≥", color: "text-buy" },
+                          { key: "sl", label: "SL ≤", color: "text-sell" },
+                        ].map(({ key, label, color }) => (
+                          <div key={key} className="flex items-center gap-2">
+                            <span className={`w-12 shrink-0 text-[10px] font-semibold ${color}`}>{label}</span>
+                            <input
+                              type="number" step="any"
+                              value={editForm[key as keyof Form]}
+                              onChange={(e) => setEditForm((f) => ({ ...f, [key]: e.target.value }))}
+                              className="flex-1 rounded border border-line bg-white px-2 py-1 text-xs tabular-nums outline-none focus:border-zinc-400"
+                            />
+                          </div>
+                        ))}
+                        <input
+                          type="text" value={editForm.note}
+                          onChange={(e) => setEditForm((f) => ({ ...f, note: e.target.value }))}
+                          placeholder="Note"
+                          className="w-full rounded border border-line bg-white px-2 py-1 text-xs outline-none focus:border-zinc-400"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => saveEdit(a.id)}
+                            disabled={saving || (!editForm.entry && !editForm.tp && !editForm.sl)}
+                            className="flex flex-1 items-center justify-center gap-1 border border-ink bg-ink py-1.5 text-xs font-semibold text-white hover:opacity-75 disabled:opacity-40"
+                          >
+                            <Save size={11} />{saving ? "Saving…" : "Save"}
+                          </button>
+                          <button onClick={() => setEditingId(null)} className="border border-line px-3 py-1.5 text-xs text-zinc-500 hover:text-ink">
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
