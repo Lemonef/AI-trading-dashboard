@@ -5,12 +5,6 @@ import { User, Bell, Check } from "lucide-react";
 
 type Session = { id: string; name: string | null; telegram_chat_id: string | null };
 
-function genUUID(): string {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
-  });
-}
 
 export function useSession(): { sessionId: string | null; session: Session | null } {
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -19,7 +13,7 @@ export function useSession(): { sessionId: string | null; session: Session | nul
   useEffect(() => {
     let id = localStorage.getItem("session_id");
     if (!id) {
-      id = genUUID();
+      id = crypto.randomUUID();
       localStorage.setItem("session_id", id);
     }
     // Also set cookie so server components can read it

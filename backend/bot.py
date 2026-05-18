@@ -41,7 +41,7 @@ def handle_setup(message):
     print(f"[bot] /setup → {name} ({chat_id})")
 
 
-@bot.message_handler(commands=["myid", "start"])
+@bot.message_handler(commands=["myid"])
 def handle_myid(message):
     chat_id = message.chat.id
     name = message.from_user.first_name or ""

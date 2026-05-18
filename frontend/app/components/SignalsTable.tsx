@@ -186,7 +186,7 @@ export default function SignalsTable({
       else if (sortKey === "action") cmp = actionOrder[a.action] - actionOrder[b.action];
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [signals, prices, sortKey, sortDir, filter]);
+  }, [signals, prices, sortKey, sortDir, filter, search]);
 
   function SortBtn({ label, k }: { label: string; k: SortKey }) {
     const active = sortKey === k;
@@ -241,6 +241,7 @@ export default function SignalsTable({
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => e.key === "Escape" && setSearch("")}
           placeholder="Search symbol or name…"
           className="h-8 rounded border border-line bg-white px-2.5 text-xs text-ink placeholder-zinc-400 outline-none focus:border-zinc-400 w-full sm:w-44"
         />

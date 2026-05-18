@@ -11,29 +11,6 @@ def _fmt(value: float | None) -> str:
     return f"{value:,.6g}"
 
 
-async def send_telegram_alert(signal: Signal, settings: Settings) -> None:
-    if not signal.changed or not settings.telegram_bot_token or not settings.telegram_chat_id:
-        return
-
-    action_emoji = {
-        "long_setup": "🟢",
-        "short_setup": "🔴",
-        "watch": "🟡",
-        "no_trade": "⚫",
-    }.get(signal.action, "")
-
-    message = (
-        f"{action_emoji} {signal.symbol} · {signal.timeframe}: {signal.action.replace('_', ' ').upper()}\n"
-        f"Trend: {signal.trend} · Confidence: {round(signal.confidence * 100)}%\n"
-        f"Price: {_fmt(signal.close)}\n"
-        f"TP: {_fmt(signal.tp)} · SL: {_fmt(signal.sl)}\n"
-        f"\n{signal.summary}\n\n"
-        "⚠️ Manual confirmation required before execution."
-    )
-    url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage"
-    async with httpx.AsyncClient(timeout=15) as client:
-        await client.post(url, json={"chat_id": settings.telegram_chat_id, "text": message})
-
 
 async def register_bot_commands(settings: Settings) -> None:
     """Set bot command list visible when user types / in chat."""
