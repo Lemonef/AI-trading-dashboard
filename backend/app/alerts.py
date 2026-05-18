@@ -51,60 +51,6 @@ async def register_bot_commands(settings: Settings) -> None:
         pass
 
 
-async def handle_bot_commands(settings: Settings) -> None:
-    """Poll for /myid command, reply with chat ID, acknowledge all updates."""
-    if not settings.telegram_bot_token:
-        return
-    try:
-        url_base = f"https://api.telegram.org/bot{settings.telegram_bot_token}"
-        async with httpx.AsyncClient(timeout=15) as client:
-            res = await client.get(f"{url_base}/getUpdates", params={"limit": 50, "timeout": 1})
-            if not res.is_success:
-                return
-            updates = res.json().get("result", [])
-            if not updates:
-                return
-
-            from datetime import datetime, timezone, timedelta
-            now_utc = datetime.now(timezone.utc)
-
-            max_update_id = 0
-            for update in updates:
-                update_id = update.get("update_id", 0)
-                if update_id > max_update_id:
-                    max_update_id = update_id
-
-                msg = update.get("message", {})
-                text = (msg.get("text") or "").strip().lower()
-                chat_id = msg.get("chat", {}).get("id")
-
-                # Skip messages older than 2 hours — offset acknowledgement handles true duplicates
-                msg_ts = msg.get("date", 0)
-                msg_age = now_utc - datetime.fromtimestamp(msg_ts, tz=timezone.utc)
-                if msg_age.total_seconds() > 2 * 3600:
-                    continue
-
-                if chat_id and text.startswith("/myid"):
-                    first_name = msg.get("from", {}).get("first_name", "")
-                    greeting = f"Hi {first_name}! " if first_name else ""
-                    await client.post(f"{url_base}/sendMessage", json={
-                        "chat_id": chat_id,
-                        "text": (
-                            f"🤖 {greeting}Your Telegram Chat ID is:\n\n"
-                            f"`{chat_id}`\n\n"
-                            f"Copy this number → open Trading Signal Desk → click **Setup alerts** → paste it in."
-                        ),
-                        "parse_mode": "Markdown",
-                    })
-
-            # Acknowledge — marks all updates as read so they don't re-process
-            await client.get(
-                f"{url_base}/getUpdates",
-                params={"offset": max_update_id + 1, "limit": 1, "timeout": 1},
-            )
-    except Exception as e:
-        print(f"[bot] handle_bot_commands error: {e}")
-
 
 async def send_price_alert_hit(alert: dict, price: float, level: str, settings: Settings) -> None:
     if not settings.telegram_bot_token or not settings.telegram_chat_id:
