@@ -22,7 +22,11 @@ async def send_telegram_alert(signal: Signal, settings: Settings) -> None:
         "no_trade": "⚫",
     }.get(signal.action, "")
 
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).strftime("%d %b %Y %H:%M UTC")
+
     message = (
+        f"🕐 {now}\n"
         f"{action_emoji} {signal.symbol} · {signal.timeframe}: {signal.action.replace('_', ' ').upper()}\n"
         f"Trend: {signal.trend} · Confidence: {round(signal.confidence * 100)}%\n"
         f"Price: {_fmt(signal.close)}\n"
