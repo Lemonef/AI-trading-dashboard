@@ -42,6 +42,8 @@ async def main() -> None:
                 print(f"    ⚠ no id — skipping update")
             label = "✦ Gemini" if ai_enhanced else "⚠ fallback (check GEMINI_API_KEY)"
             print(f"    → {label}")
+        # Stamp updated_at so dashboard shows correct "Last AI summary" time
+        store.save_daily_summary(date.today().isoformat(), "", len(unique))
         print("Done.")
         return
 

@@ -53,9 +53,8 @@ export default async function Home() {
         month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false,
       })
     : null;
-  const lastAiSignal = signals.find((s) => s.ai_enhanced);
-  const lastAiSummary = lastAiSignal
-    ? new Date(lastAiSignal.created_at).toLocaleString("en-US", {
+  const lastAiSummary = (dailySummary?.updated_at ?? dailySummary?.created_at)
+    ? new Date((dailySummary!.updated_at ?? dailySummary!.created_at)!).toLocaleString("en-US", {
         month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false,
       })
     : null;

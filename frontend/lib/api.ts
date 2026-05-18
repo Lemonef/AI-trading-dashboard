@@ -135,6 +135,7 @@ export type DailySummary = {
   summary: string;
   signals_count: number;
   created_at: string;
+  updated_at?: string;
 };
 
 export async function getDailySummary(): Promise<DailySummary | null> {

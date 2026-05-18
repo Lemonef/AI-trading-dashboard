@@ -116,7 +116,13 @@ class SignalStore:
         response.raise_for_status()
 
     def save_daily_summary(self, date_str: str, summary: str, signals_count: int) -> None:
-        payload = {"date": date_str, "summary": summary, "signals_count": signals_count}
+        from datetime import datetime, timezone
+        payload = {
+            "date": date_str,
+            "summary": summary,
+            "signals_count": signals_count,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
         if self.supabase_enabled:
             response = httpx.post(
                 f"{self.settings.supabase_url}/rest/v1/daily_summaries",
