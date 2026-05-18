@@ -164,13 +164,15 @@ async def daily_strategy_summary(signals: list[Signal], settings: Settings) -> s
 
 
 def _load_skills(settings: Settings) -> str:
-    """Load IDS + DNA skill files as context for the daily report."""
+    """Load condensed IDS + DNA skill files. Full files exceed free-tier TPM."""
     skills_dir = settings.skills_dir
     parts: list[str] = []
-    for name in ["Investor-Decision-Stack-SKILL.md", "Investor-DNA-SKILL.md"]:
+    # Limit each file to first 2500 chars to stay within token budget
+    for name in ["Investor-Decision-Stack-SKILL.md", "Investor-DNA-SKILL.md", "Legends-SKILL.md"]:
         path = skills_dir / name
         if path.exists():
-            parts.append(f"# {name}\n{path.read_text(encoding='utf-8')}")
+            content = path.read_text(encoding="utf-8")[:2500]
+            parts.append(f"# {name} (condensed)\n{content}")
     return "\n\n---\n\n".join(parts)
 
 
@@ -246,9 +248,9 @@ End with overall DNA advice for {settings.investor_dna}."""
                 "https://api.groq.com/openai/v1/chat/completions",
                 headers={"Authorization": f"Bearer {settings.groq_api_key}"},
                 json={
-                    "model": "llama-3.3-70b-versatile",
+                    "model": "llama-3.1-8b-instant",  # 131k TPM vs 12k for 70b
                     "messages": [{"role": "user", "content": prompt}],
-                    "max_tokens": 2000,
+                    "max_tokens": 1500,
                     "temperature": 0.4,
                 },
             )
