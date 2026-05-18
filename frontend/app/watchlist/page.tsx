@@ -61,10 +61,14 @@ export default async function WatchlistPage() {
         {watched.length === 0 ? (
           <div className="rounded-sm border border-line bg-white px-8 py-16 text-center">
             <p className="text-sm font-semibold text-ink">Your watchlist is empty</p>
-            <p className="mt-1 text-sm text-zinc-500">
-              Go to <Link href="/" className="underline">Signals</Link> and click{" "}
-              <span className="font-semibold">+</span> on any market to add it here.
-            </p>
+            <p className="mt-1 text-sm text-zinc-500">Go to Signals and click + on any market to add it here.</p>
+            <Link
+              href="/"
+              className="group mt-4 mx-auto inline-flex items-center gap-1.5 text-sm font-semibold text-ink transition-colors hover:text-zinc-500"
+            >
+              <span className="text-base leading-none group-hover:translate-x-0.5 transition-transform duration-150">→</span>
+              <span className="underline underline-offset-2 decoration-zinc-300 group-hover:decoration-zinc-500 transition-colors">Browse Signals</span>
+            </Link>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
