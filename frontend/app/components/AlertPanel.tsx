@@ -192,10 +192,7 @@ export default function AlertPanel({
       {!adding && (
         <div className="border-t border-line px-4 py-2.5">
           <button
-            onClick={() => {
-              setAdding(true);
-              if (currentPrice) setForm((f) => ({ ...f, entry: currentPrice.toFixed(4) }));
-            }}
+            onClick={() => { setAdding(true); setForm(EMPTY_FORM); }}
             className="flex w-full items-center justify-center gap-1.5 border border-dashed border-zinc-300 py-1.5 text-xs text-zinc-500 hover:border-zinc-400 hover:text-ink"
           >
             <Plus size={12} />Add alert for {symbol}

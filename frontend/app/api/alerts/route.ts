@@ -27,6 +27,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
+  if (!body.entry && !body.tp && !body.sl) {
+    return NextResponse.json({ error: "At least one level (entry, tp, sl) required" }, { status: 400 });
+  }
   const res = await fetch(`${SUPABASE_URL}/rest/v1/price_alerts`, {
     method: "POST",
     headers: { ...headers(), Prefer: "return=representation" },
