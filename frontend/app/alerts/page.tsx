@@ -235,8 +235,15 @@ export default function AlertsPage() {
           <div className="py-10 text-center text-sm text-zinc-400">Loading…</div>
         ) : active.length === 0 && !adding ? (
           <div className="border border-line bg-white px-6 py-14 text-center">
+            <Bell size={24} className="mx-auto mb-3 text-zinc-300" />
             <p className="text-sm font-semibold text-ink">No active alerts</p>
-            <p className="mt-1 text-sm text-zinc-500">Click <strong>+ New Alert</strong> to set a price alert on any market.</p>
+            <p className="mt-1 text-sm text-zinc-500">Set price alerts on any market — get notified on Telegram when price hits your level.</p>
+            <button
+              onClick={() => { setAdding(true); setSearch(""); setSelectedSymbol(null); setAddForm(EMPTY); }}
+              className="mt-4 flex items-center gap-2 border border-ink bg-ink px-5 py-2 text-sm font-semibold text-white hover:opacity-75 mx-auto"
+            >
+              <Plus size={13} />Add first alert
+            </button>
           </div>
         ) : active.length > 0 && (
           <div className="border border-line bg-white">
