@@ -22,11 +22,7 @@ async def send_telegram_alert(signal: Signal, settings: Settings) -> None:
         "no_trade": "⚫",
     }.get(signal.action, "")
 
-    from datetime import datetime, timezone
-    now = datetime.now(timezone.utc).strftime("%d %b %Y %H:%M UTC")
-
     message = (
-        f"🕐 {now}\n"
         f"{action_emoji} {signal.symbol} · {signal.timeframe}: {signal.action.replace('_', ' ').upper()}\n"
         f"Trend: {signal.trend} · Confidence: {round(signal.confidence * 100)}%\n"
         f"Price: {_fmt(signal.close)}\n"
@@ -37,6 +33,38 @@ async def send_telegram_alert(signal: Signal, settings: Settings) -> None:
     url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage"
     async with httpx.AsyncClient(timeout=15) as client:
         await client.post(url, json={"chat_id": settings.telegram_chat_id, "text": message})
+
+
+async def send_alert_batch(signals: list[Signal], settings: Settings) -> None:
+    """Send date header once, then one message per signal."""
+    if not signals or not settings.telegram_bot_token or not settings.telegram_chat_id:
+        return
+
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    # Convert to Bangkok time (UTC+7)
+    bkk_hour = (now.hour + 7) % 24
+    bkk_time = now.strftime(f"%d %b %Y {bkk_hour:02d}:{now.strftime('%M')} BKK")
+
+    url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage"
+    async with httpx.AsyncClient(timeout=15) as client:
+        # Date header
+        await client.post(url, json={"chat_id": settings.telegram_chat_id, "text": f"📅 {bkk_time} · {len(signals)} signal change{'s' if len(signals) != 1 else ''}"})
+        # Individual signals
+        for signal in signals:
+            action_emoji = {"long_setup": "🟢", "short_setup": "🔴", "watch": "🟡", "no_trade": "⚫"}.get(signal.action, "")
+            flag = "📈 TREND FLIP · " if signal.trend_changed and not signal.changed else ""
+            message = (
+                f"{flag}{action_emoji} {signal.symbol} · {signal.timeframe}: {signal.action.replace('_', ' ').upper()}\n"
+                f"Trend: {signal.trend} · Confidence: {round(signal.confidence * 100)}%\n"
+                f"Price: {_fmt(signal.close)}\n"
+                f"TP: {_fmt(signal.tp)} · SL: {_fmt(signal.sl)}\n"
+                f"\n{signal.summary}\n\n"
+                "⚠️ Manual confirmation required."
+            )
+            await client.post(url, json={"chat_id": settings.telegram_chat_id, "text": message})
+        # End-of-batch separator
+        await client.post(url, json={"chat_id": settings.telegram_chat_id, "text": "━━━━━━━━━━━━━━━━━━━━━━"})
 
 
 async def send_daily_digest(signals: list[Signal], summary: str | None, settings: Settings, watchlist: set[str] | None = None) -> None:

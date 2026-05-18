@@ -1,5 +1,5 @@
 from app.ai import summarize_signal
-from app.alerts import send_daily_digest, send_telegram_alert
+from app.alerts import send_alert_batch, send_daily_digest
 from app.config import Settings
 from app.models import ScanResult, Signal
 from app.storage import SignalStore
@@ -69,10 +69,12 @@ async def run_scan(settings: Settings) -> ScanResult:
         signal = build_signal(market_symbol, exchange_id, settings.timeframe, enriched, previous_action, previous_trend)
         signal.summary = await summarize_signal(signal, settings)
         store.save_signal(signal)
-        # Alert only if symbol is in watchlist AND (action or trend changed)
-        if symbol in watchlist and (signal.changed or signal.trend_changed):
-            await send_telegram_alert(signal, settings)
         signals.append(signal)
+
+    # Send all watchlist alerts as one batch with date header + separator
+    alert_signals = [s for s in signals if s.symbol in watchlist and (s.changed or s.trend_changed)]
+    if alert_signals:
+        await send_alert_batch(alert_signals, settings)
 
     return ScanResult(
         scanned=len(signals),
