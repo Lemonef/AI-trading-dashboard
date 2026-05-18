@@ -44,7 +44,7 @@ export default function WatchlistCard({ signal }: { signal: Signal }) {
   const [showAlert, setShowAlert] = useState(false);
 
   return (
-    <div className="border border-line bg-white">
+    <div className="card-lift border border-line bg-white">
       {/* Header */}
       <div className="flex items-start justify-between border-b border-line px-4 py-3">
         <Link href={`/signals/${symbolToSlug(signal.symbol)}`} className="min-w-0 flex-1">

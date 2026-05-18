@@ -116,7 +116,7 @@ export default function AlertPanel({
   }
 
   return (
-    <div className="border border-line bg-white shadow-md">
+    <div className="animate-slidedown border border-line bg-white shadow-md">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-line bg-panel px-4 py-2.5">
         <div className="flex items-center gap-2">

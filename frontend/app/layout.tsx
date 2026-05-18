@@ -38,7 +38,7 @@ export default function RootLayout({
         </header>
         <Nav />
         <Suspense><AutoSetup /></Suspense>
-        {children}
+        <div className="animate-fadein">{children}</div>
         <Toaster position="bottom-right" richColors closeButton />
       </body>
     </html>

@@ -111,9 +111,9 @@ export default async function Home() {
         <SignalsTable signals={signals} watchlist={watchlist} />
 
         {/* Sidebar */}
-        <aside className="space-y-4">
+        <aside className="space-y-4 stagger">
 
-          <section className="border border-line bg-white p-4">
+          <section className="card-lift border border-line bg-white p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">
                 <Brain size={12} />Top Signal

@@ -135,7 +135,7 @@ export default function AlertsPage() {
 
         {/* Add new alert panel */}
         {adding && (
-          <div className="border border-line bg-white">
+          <div className="animate-slidedown border border-line bg-white">
             <div className="flex items-center justify-between border-b border-line bg-panel px-5 py-3">
               <div className="flex items-center gap-2 text-xs font-semibold text-zinc-500">
                 <Bell size={13} className="text-amber-500" />
