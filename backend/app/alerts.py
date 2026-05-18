@@ -35,6 +35,27 @@ async def send_telegram_alert(signal: Signal, settings: Settings) -> None:
         await client.post(url, json={"chat_id": settings.telegram_chat_id, "text": message})
 
 
+async def send_price_alert_hit(alert: dict, price: float, level: str, settings: Settings) -> None:
+    if not settings.telegram_bot_token or not settings.telegram_chat_id:
+        return
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    bkk_hour = (now.hour + 7) % 24
+    bkk_time = now.strftime(f"%d %b %Y {bkk_hour:02d}:{now.strftime('%M')} BKK")
+    note = f"\n📝 {alert['note']}" if alert.get("note") else ""
+    message = (
+        f"🎯 PRICE ALERT HIT\n"
+        f"🕐 {bkk_time}\n"
+        f"Symbol: {alert['symbol']}\n"
+        f"Level: {level}\n"
+        f"Current price: {_fmt(price)}{note}\n\n"
+        "⚠️ Manual confirmation required before execution."
+    )
+    url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage"
+    async with httpx.AsyncClient(timeout=15) as client:
+        await client.post(url, json={"chat_id": settings.telegram_chat_id, "text": message})
+
+
 async def send_alert_batch(signals: list[Signal], settings: Settings) -> None:
     """Send date header once, then one message per signal."""
     if not signals or not settings.telegram_bot_token or not settings.telegram_chat_id:

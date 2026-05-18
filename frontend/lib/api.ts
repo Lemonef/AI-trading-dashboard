@@ -111,6 +111,18 @@ async function getSupabaseSignals(): Promise<Signal[]> {
   }
 }
 
+export type PriceAlert = {
+  id: string;
+  symbol: string;
+  entry: number | null;
+  tp: number | null;
+  sl: number | null;
+  note: string | null;
+  active: boolean;
+  triggered_at: string | null;
+  created_at: string;
+};
+
 export async function getWatchlist(): Promise<Set<string>> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

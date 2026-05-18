@@ -1,3 +1,27 @@
+-- ── Price Alerts ──────────────────────────────────────────────────────────
+create table if not exists public.price_alerts (
+  id uuid primary key default gen_random_uuid(),
+  symbol text not null,
+  entry numeric,
+  tp numeric,
+  sl numeric,
+  note text,
+  active boolean not null default true,
+  triggered_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+alter table public.price_alerts enable row level security;
+
+drop policy if exists "price_alerts readable" on public.price_alerts;
+drop policy if exists "price_alerts writable" on public.price_alerts;
+
+create policy "price_alerts readable"
+  on public.price_alerts for select to anon, authenticated using (true);
+
+create policy "price_alerts writable"
+  on public.price_alerts for all to anon, authenticated using (true) with check (true);
+
 -- ── Watchlist ─────────────────────────────────────────────────────────────
 create table if not exists public.watchlist (
   id uuid primary key default gen_random_uuid(),

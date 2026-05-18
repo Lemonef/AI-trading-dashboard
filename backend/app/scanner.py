@@ -1,5 +1,5 @@
 from app.ai import summarize_signal
-from app.alerts import send_alert_batch, send_daily_digest
+from app.alerts import _fmt, send_alert_batch, send_daily_digest, send_price_alert_hit
 from app.config import Settings
 from app.models import ScanResult, Signal
 from app.storage import SignalStore
@@ -71,10 +71,31 @@ async def run_scan(settings: Settings) -> ScanResult:
         store.save_signal(signal)
         signals.append(signal)
 
-    # Send all watchlist alerts as one batch with date header + separator
+    # Send watchlist change alerts as one batch
     alert_signals = [s for s in signals if s.symbol in watchlist and (s.changed or s.trend_changed)]
     if alert_signals:
         await send_alert_batch(alert_signals, settings)
+
+    # Check custom price alerts
+    price_map = {s.symbol: s.close for s in signals}
+    price_alerts = store.list_price_alerts(active_only=True)
+    for alert in price_alerts:
+        price = price_map.get(alert["symbol"])
+        if price is None:
+            continue
+        tp = alert.get("tp")
+        sl = alert.get("sl")
+        entry = alert.get("entry")
+        triggered = None
+        if tp and price >= tp:
+            triggered = f"TP {_fmt(tp)} reached (price: {_fmt(price)})"
+        elif sl and price <= sl:
+            triggered = f"SL {_fmt(sl)} hit (price: {_fmt(price)})"
+        elif entry and abs(price - entry) / entry < 0.005:
+            triggered = f"Entry zone {_fmt(entry)} reached (price: {_fmt(price)})"
+        if triggered:
+            await send_price_alert_hit(alert, price, triggered, settings)
+            store.trigger_price_alert(alert["id"])
 
     return ScanResult(
         scanned=len(signals),

@@ -115,6 +115,36 @@ class SignalStore:
             print(f"    ERROR: {response.text}")
         response.raise_for_status()
 
+    def list_price_alerts(self, active_only: bool = True) -> list[dict]:
+        if not self.supabase_enabled:
+            return []
+        try:
+            params = {"select": "*", "order": "created_at.desc"}
+            if active_only:
+                params["active"] = "eq.true"
+            response = httpx.get(
+                f"{self.settings.supabase_url}/rest/v1/price_alerts",
+                headers=self._headers(),
+                params=params,
+                timeout=20,
+            )
+            if not response.is_success:
+                return []
+            return response.json()
+        except Exception:
+            return []
+
+    def trigger_price_alert(self, alert_id: str) -> None:
+        if not self.supabase_enabled:
+            return
+        from datetime import datetime, timezone
+        httpx.patch(
+            f"{self.settings.supabase_url}/rest/v1/price_alerts?id=eq.{alert_id}",
+            headers={**self._headers(), "Prefer": "return=minimal"},
+            json={"active": False, "triggered_at": datetime.now(timezone.utc).isoformat()},
+            timeout=20,
+        )
+
     def save_daily_summary(self, date_str: str, summary: str, signals_count: int) -> None:
         from datetime import datetime, timezone
         payload = {
