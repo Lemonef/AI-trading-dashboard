@@ -201,14 +201,30 @@ class SignalStore:
             timeout=20,
         )
 
+    def stamp_summarize_time(self, date_str: str) -> None:
+        """Update only updated_at — called after --summarize completes."""
+        if not self.supabase_enabled:
+            return
+        from datetime import datetime, timezone
+        try:
+            httpx.patch(
+                f"{self.settings.supabase_url}/rest/v1/daily_summaries?date=eq.{date_str}",
+                headers={**self._headers(), "Prefer": "return=minimal"},
+                json={"updated_at": datetime.now(timezone.utc).isoformat()},
+                timeout=20,
+            )
+        except Exception:
+            pass  # Non-critical — timestamp is best-effort
+
     def save_daily_summary(self, date_str: str, summary: str, signals_count: int) -> None:
         from datetime import datetime, timezone
         payload = {
             "date": date_str,
-            "summary": summary,
             "signals_count": signals_count,
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }
+        if summary:  # Never overwrite with empty string
+            payload["summary"] = summary
         if self.supabase_enabled:
             response = httpx.post(
                 f"{self.settings.supabase_url}/rest/v1/daily_summaries?on_conflict=date",
@@ -216,7 +232,16 @@ class SignalStore:
                 json=payload,
                 timeout=20,
             )
-            response.raise_for_status()
+            if not response.is_success:
+                # Retry without updated_at if column doesn't exist yet
+                payload.pop("updated_at", None)
+                response = httpx.post(
+                    f"{self.settings.supabase_url}/rest/v1/daily_summaries?on_conflict=date",
+                    headers={**self._headers(), "Prefer": "resolution=merge-duplicates,return=minimal"},
+                    json=payload,
+                    timeout=20,
+                )
+                response.raise_for_status()
             return
         summary_file = Path(self.settings.data_dir) / "daily_summaries.json"
         existing = []
