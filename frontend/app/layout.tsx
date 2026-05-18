@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import Nav from "./components/Nav";
+import UserSetup from "./components/UserSetup";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -30,6 +31,7 @@ export default function RootLayout({
                 Trading Signal Desk
               </h1>
             </div>
+            <UserSetup />
           </div>
         </header>
         <Nav />

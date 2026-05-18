@@ -123,13 +123,14 @@ export type PriceAlert = {
   created_at: string;
 };
 
-export async function getWatchlist(): Promise<Set<string>> {
+export async function getWatchlist(sessionId?: string | null): Promise<Set<string>> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !anonKey) return new Set();
   try {
     const url = new URL(`${supabaseUrl}/rest/v1/watchlist`);
     url.searchParams.set("select", "symbol");
+    if (sessionId) url.searchParams.set("session_id", `eq.${sessionId}`);
     const res = await fetch(url, {
       cache: "no-store",
       headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` },

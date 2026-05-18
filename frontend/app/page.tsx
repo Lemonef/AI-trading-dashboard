@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { Activity, Bell, Brain, ShieldCheck, Target, Zap } from "lucide-react";
 import { getSignals, getWatchlist, getDailySummary, symbolToSlug, type Signal } from "../lib/api";
 import ScanButton from "./components/ScanButton";
@@ -37,8 +38,9 @@ function MetricCard({ icon, label, value, dim = false }: { icon: ReactNode; labe
 }
 
 export default async function Home() {
+  const sessionId = (await cookies()).get("session_id")?.value ?? null;
   const [signals, watchlist, dailySummary] = await Promise.all([
-    getSignals(), getWatchlist(), getDailySummary(),
+    getSignals(), getWatchlist(sessionId), getDailySummary(),
   ]);
 
   const active = signals.filter((s) => s.action !== "no_trade");

@@ -13,10 +13,12 @@ function headers() {
 
 export async function GET(req: NextRequest) {
   const symbol = req.nextUrl.searchParams.get("symbol");
+  const sessionId = req.nextUrl.searchParams.get("session_id");
   const url = new URL(`${SUPABASE_URL}/rest/v1/price_alerts`);
   url.searchParams.set("select", "*");
   url.searchParams.set("order", "created_at.desc");
   if (symbol) url.searchParams.set("symbol", `eq.${symbol}`);
+  if (sessionId) url.searchParams.set("session_id", `eq.${sessionId}`);
 
   const res = await fetch(url, { headers: headers(), cache: "no-store" });
   if (!res.ok) return NextResponse.json([], { status: 200 });

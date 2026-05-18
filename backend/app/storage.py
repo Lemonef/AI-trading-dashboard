@@ -53,6 +53,7 @@ class SignalStore:
         return None
 
     def list_watchlist(self) -> set[str]:
+        """All symbols across all users (for scanner)."""
         if not self.supabase_enabled:
             return set()
         try:
@@ -67,6 +68,61 @@ class SignalStore:
             return {row["symbol"] for row in response.json()}
         except Exception:
             return set()
+
+    def list_watchlist_by_user(self) -> list[dict]:
+        """Returns [{session_id, telegram_chat_id, symbols: [...]}] for per-user alerts."""
+        if not self.supabase_enabled:
+            return []
+        try:
+            wl_res = httpx.get(
+                f"{self.settings.supabase_url}/rest/v1/watchlist",
+                headers=self._headers(),
+                params={"select": "symbol,session_id"},
+                timeout=20,
+            )
+            if not wl_res.is_success:
+                return []
+            rows = wl_res.json()
+            # Group by session_id
+            groups: dict[str, list[str]] = {}
+            no_session: list[str] = []
+            for r in rows:
+                sid = r.get("session_id")
+                if sid:
+                    groups.setdefault(sid, []).append(r["symbol"])
+                else:
+                    no_session.append(r["symbol"])
+
+            # Fetch session info for each session_id
+            result = []
+            if groups:
+                session_ids = list(groups.keys())
+                sess_res = httpx.get(
+                    f"{self.settings.supabase_url}/rest/v1/user_sessions",
+                    headers=self._headers(),
+                    params={"select": "id,telegram_chat_id,name", "id": f"in.({','.join(session_ids)})"},
+                    timeout=20,
+                )
+                sessions = {s["id"]: s for s in (sess_res.json() if sess_res.is_success else [])}
+                for sid, symbols in groups.items():
+                    sess = sessions.get(sid, {})
+                    result.append({
+                        "session_id": sid,
+                        "telegram_chat_id": sess.get("telegram_chat_id"),
+                        "name": sess.get("name", "User"),
+                        "symbols": symbols,
+                    })
+            # Legacy entries without session_id use the global TELEGRAM_CHAT_ID
+            if no_session:
+                result.append({
+                    "session_id": None,
+                    "telegram_chat_id": self.settings.telegram_chat_id,
+                    "name": "Global",
+                    "symbols": no_session,
+                })
+            return result
+        except Exception:
+            return []
 
     def save_signal(self, signal: Signal) -> Signal:
         payload = signal.model_dump(mode="json")

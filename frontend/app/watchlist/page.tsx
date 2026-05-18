@@ -1,11 +1,13 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { getSignals, getWatchlist } from "../../lib/api";
 import ScanButton from "../components/ScanButton";
 import WatchlistCard from "../components/WatchlistCard";
 
 
 export default async function WatchlistPage() {
-  const [signals, watchlist] = await Promise.all([getSignals(), getWatchlist()]);
+  const sessionId = (await cookies()).get("session_id")?.value ?? null;
+  const [signals, watchlist] = await Promise.all([getSignals(), getWatchlist(sessionId)]);
 
   const isDemo = signals.length > 0 && signals.every((s) => s.exchange === "demo");
   const lastUpdated = signals.length > 0

@@ -35,6 +35,36 @@ async def send_telegram_alert(signal: Signal, settings: Settings) -> None:
         await client.post(url, json={"chat_id": settings.telegram_chat_id, "text": message})
 
 
+async def handle_bot_commands(settings: Settings) -> None:
+    """Poll for /myid command and reply with the user's chat ID."""
+    if not settings.telegram_bot_token:
+        return
+    try:
+        url_base = f"https://api.telegram.org/bot{settings.telegram_bot_token}"
+        # Get recent updates
+        async with httpx.AsyncClient(timeout=10) as client:
+            res = await client.get(f"{url_base}/getUpdates", params={"timeout": 1, "limit": 10})
+            if not res.is_success:
+                return
+            updates = res.json().get("result", [])
+            for update in updates:
+                msg = update.get("message", {})
+                text = msg.get("text", "")
+                chat_id = msg.get("chat", {}).get("id")
+                if chat_id and text.strip().startswith("/myid"):
+                    await client.post(f"{url_base}/sendMessage", json={
+                        "chat_id": chat_id,
+                        "text": (
+                            f"🤖 Your Telegram Chat ID is:\n\n"
+                            f"`{chat_id}`\n\n"
+                            f"Copy this number and paste it into the Trading Signal Desk → Setup Alerts."
+                        ),
+                        "parse_mode": "Markdown",
+                    })
+    except Exception:
+        pass
+
+
 async def send_price_alert_hit(alert: dict, price: float, level: str, settings: Settings) -> None:
     if not settings.telegram_bot_token or not settings.telegram_chat_id:
         return

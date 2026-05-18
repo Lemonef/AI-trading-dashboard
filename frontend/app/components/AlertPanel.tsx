@@ -15,9 +15,15 @@ export default function AlertPanel({ symbol, currentPrice, onClose }: {
   const [form, setForm] = useState<Form>({ entry: "", tp: "", sl: "", note: "" });
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
+  useEffect(() => { setSessionId(localStorage.getItem("session_id")); }, []);
 
   useEffect(() => {
-    fetch(`/api/alerts?symbol=${encodeURIComponent(symbol)}`)
+    const sid = localStorage.getItem("session_id");
+    const params = new URLSearchParams({ symbol });
+    if (sid) params.set("session_id", sid);
+    fetch(`/api/alerts?${params}`)
       .then((r) => r.json())
       .then((rows: PriceAlert[]) => {
         const active = rows.find((r) => r.active) ?? null;
@@ -65,6 +71,7 @@ export default function AlertPanel({ symbol, currentPrice, onClose }: {
             tp: form.tp ? parseFloat(form.tp) : null,
             sl: form.sl ? parseFloat(form.sl) : null,
             note: form.note || null,
+            ...(sessionId ? { session_id: sessionId } : {}),
           }),
         });
       }
