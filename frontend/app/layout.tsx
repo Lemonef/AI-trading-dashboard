@@ -23,15 +23,20 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <body>
         {/* Site header */}
-        <header className="border-b border-line bg-[#F7F6F0]">
+        <header className="border-b border-line" style={{ background: "linear-gradient(135deg, #F9F8F3 0%, #F2F1EB 100%)" }}>
           <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                AI assisted · User confirmed
-              </p>
-              <h1 className="mt-0.5 text-xl font-semibold tracking-tight text-ink">
-                Trading Signal Desk
-              </h1>
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-ink text-[11px] font-bold text-white shadow-sm">
+                T
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold tracking-tight text-ink leading-tight">
+                  Trading Signal Desk
+                </h1>
+                <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-zinc-400">
+                  AI assisted · User confirmed
+                </p>
+              </div>
             </div>
             <UserSetup />
           </div>

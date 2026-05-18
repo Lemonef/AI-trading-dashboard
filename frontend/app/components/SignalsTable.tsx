@@ -77,10 +77,10 @@ const actionOrder: Record<Signal["action"], number> = {
 const trendOrder: Record<string, number> = { bullish: 0, sideways: 1, bearish: 2 };
 
 function toneFor(action: Signal["action"]) {
-  if (action === "long_setup") return "border-buy text-buy";
-  if (action === "short_setup") return "border-sell text-sell";
-  if (action === "watch") return "border-wait text-wait";
-  return "border-zinc-300 text-zinc-400";
+  if (action === "long_setup") return "badge-buy";
+  if (action === "short_setup") return "badge-sell";
+  if (action === "watch") return "badge-wait";
+  return "badge-none";
 }
 
 function fmt(v: number | null | undefined, d = 2): string {

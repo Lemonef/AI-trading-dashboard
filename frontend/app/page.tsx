@@ -30,7 +30,7 @@ function fmt(v: number | null | undefined, d = 2): string {
 
 function MetricCard({ icon, label, value, dim = false }: { icon: ReactNode; label: string; value: number; dim?: boolean }) {
   return (
-    <div className="min-w-[100px] border border-line bg-white px-4 py-3">
+    <div className="card-lift min-w-[100px] border border-line bg-surface px-4 py-3 shadow-sm">
       <div className="flex items-center gap-1.5 text-xs text-zinc-500">{icon}{label}</div>
       <div className={`mt-1 text-2xl font-semibold tabular-nums ${dim ? "text-zinc-400" : "text-ink"}`}>{value}</div>
     </div>
@@ -64,7 +64,7 @@ export default async function Home() {
   return (
     <main className="min-h-screen">
       {/* Page header */}
-      <section className="border-b border-line bg-[#F7F6F0]">
+      <section className="border-b border-line" style={{ background: "linear-gradient(180deg, #F6F5F0 0%, #F0EEE8 100%)" }}>
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap gap-3">
             <MetricCard icon={<Activity size={13} />} label="Markets" value={signals.length} dim />

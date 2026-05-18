@@ -7,13 +7,16 @@
   color-scheme: light;
 
   /* Colors */
-  --color-ink:    #161A1D;
-  --color-panel:  #F6F5F1;
-  --color-line:   #D9D6CC;
-  --color-bg:     #EEECE5;
-  --color-buy:    #147D64;
-  --color-sell:   #B23A48;
-  --color-wait:   #B7791F;
+  --color-ink:     #161A1D;
+  --color-muted:   #6B7280;
+  --color-panel:   #F6F5F1;
+  --color-line:    #E0DDD6;
+  --color-bg:      #EDEAE2;
+  --color-surface: #FDFCF9;
+  --color-buy:     #0D7A5F;
+  --color-sell:    #B03040;
+  --color-wait:    #9A6412;
+  --color-gold:    #C9A84C;
 
   /* Radius */
   --radius-sm: 2px;
@@ -38,6 +41,19 @@ body {
   background: var(--color-bg);
   color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Badge system ──────────────────────────────────────────────────────────── */
+.badge-buy  { @apply border border-emerald-200 bg-emerald-50 text-emerald-700; }
+.badge-sell { @apply border border-red-200 bg-red-50 text-red-700; }
+.badge-wait { @apply border border-amber-200 bg-amber-50 text-amber-700; }
+.badge-none { @apply border border-zinc-200 bg-zinc-50 text-zinc-500; }
+
+/* ── Surface card ──────────────────────────────────────────────────────────── */
+.surface {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
 }
 
 button, input, select { font: inherit; }

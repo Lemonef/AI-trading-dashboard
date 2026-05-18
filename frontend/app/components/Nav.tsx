@@ -13,7 +13,7 @@ const tabs = [
 export default function Nav() {
   const pathname = usePathname();
   return (
-    <nav className="border-b border-line bg-[#F7F6F0]">
+    <nav className="border-b border-line" style={{ background: "linear-gradient(180deg, #F4F3EE 0%, #EFEDE7 100%)" }}>
       <div className="mx-auto flex max-w-7xl items-center px-5">
         {tabs.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;

@@ -12,10 +12,10 @@ const actionLabels: Record<Signal["action"], string> = {
 };
 
 function toneFor(action: Signal["action"]) {
-  if (action === "long_setup") return "border-buy text-buy bg-green-50";
-  if (action === "short_setup") return "border-sell text-sell bg-red-50";
-  if (action === "watch") return "border-wait text-wait bg-amber-50";
-  return "border-zinc-300 text-zinc-400 bg-zinc-50";
+  if (action === "long_setup") return "badge-buy";
+  if (action === "short_setup") return "badge-sell";
+  if (action === "watch") return "badge-wait";
+  return "badge-none";
 }
 function confidenceColor(action: Signal["action"]) {
   if (action === "long_setup") return "bg-buy";

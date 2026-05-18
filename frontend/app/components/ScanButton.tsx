@@ -30,7 +30,8 @@ export default function ScanButton() {
     <button
       onClick={scan}
       disabled={scanning}
-      className="btn-press flex items-center gap-2 border border-ink bg-ink px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-40"
+      className="btn-press flex items-center gap-2 border border-ink px-4 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+      style={{ background: "linear-gradient(135deg, #1E2328 0%, #161A1D 100%)" }}
     >
       <RefreshCw size={13} className={scanning ? "animate-spin" : ""} />
       {scanning ? "Scanning…" : "Scan Now"}
