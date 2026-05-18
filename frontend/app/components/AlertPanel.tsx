@@ -108,7 +108,7 @@ export default function AlertPanel({
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs font-semibold text-ink">{a.symbol}</span>
                         {a.triggered_at && (
-                          <CheckCircle size={11} className="text-buy" title="Triggered" />
+                          <span title="Triggered"><CheckCircle size={11} className="text-buy" /></span>
                         )}
                       </div>
                       <div className="mt-0.5 flex flex-wrap gap-x-3 text-[10px] text-zinc-500">
