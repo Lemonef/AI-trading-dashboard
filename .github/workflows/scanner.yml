@@ -2,7 +2,8 @@ name: Scheduled Scanner
 
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "*/30 * * * *"   # every 30 min
+    - cron: "0 0 * * *"       # 07:00 Bangkok (UTC+7) → daily digest
   workflow_dispatch:
 
 permissions:

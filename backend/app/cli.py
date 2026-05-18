@@ -2,7 +2,10 @@ import argparse
 import asyncio
 from datetime import date
 
+import os
+
 from app.ai import daily_strategy_summary, force_summarize_signal
+from app.alerts import send_daily_digest
 from app.config import get_settings
 from app.scanner import run_scan
 from app.storage import SignalStore
@@ -54,6 +57,15 @@ async def main() -> None:
         print(f"daily_summary saved ({len(summary)} chars)")
     else:
         print("daily_summary skipped (GEMINI_API_KEY not set or error)")
+
+    # Morning digest at 00:00 UTC = 07:00 Bangkok (UTC+7)
+    from datetime import datetime, timezone
+    utc_hour = datetime.now(timezone.utc).hour
+    force_digest = os.environ.get("FORCE_DIGEST", "") == "1"
+    if utc_hour == 0 or force_digest:
+        print("Sending morning digest to Telegram…")
+        await send_daily_digest(result.signals, summary, settings)
+        print("Digest sent.")
 
 
 if __name__ == "__main__":
