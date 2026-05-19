@@ -80,7 +80,7 @@ async def send_alert_batch(signals: list[Signal], settings: Settings) -> None:
             )
             await client.post(url, json={"chat_id": settings.telegram_chat_id, "text": message})
         # End-of-batch separator
-        await client.post(url, json={"chat_id": settings.telegram_chat_id, "text": "━━━━━━━━━━━━━━━━━━━━━━"})
+        await client.post(url, json={"chat_id": settings.telegram_chat_id, "text": "─────────"})
 
 
 async def send_daily_digest(signals: list[Signal], summary: str | None, settings: Settings, watchlist: set[str] | None = None) -> None:

@@ -3,6 +3,7 @@ Standalone Telegram bot — run once to handle /myid instantly.
 Usage: python bot.py
 """
 import os
+from urllib.parse import quote
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -28,15 +29,16 @@ def handle_setup(message):
     chat_id = message.chat.id
     name = message.from_user.first_name or ""
     greeting = f"Hi {name}! " if name else ""
-    setup_link = f"{APP_URL}?setup={chat_id}" + (f"&tgname={name}" if name else "")
+    name_param = f"&tgname={quote(name)}" if name else ""
+    setup_link = f"{APP_URL}?setup={chat_id}{name_param}"
     bot.reply_to(
         message,
         f"🤖 {greeting}\n\n"
-        f"Your Chat ID: `{chat_id}`\n\n"
+        f"Your Chat ID: <code>{chat_id}</code>\n\n"
         f"👇 Tap the link to connect automatically:\n"
-        f"[Open Trading Signal Desk ↗]({setup_link})\n\n"
-        f"_Tapping the link connects your Telegram instantly\\._",
-        parse_mode="MarkdownV2",
+        f'<a href="{setup_link}">Open Trading Signal Desk ↗</a>\n\n'
+        f"<i>Tapping the link connects your Telegram instantly.</i>",
+        parse_mode="HTML",
     )
     print(f"[bot] /setup → {name} ({chat_id})")
 
@@ -49,9 +51,9 @@ def handle_myid(message):
     bot.reply_to(
         message,
         f"🤖 {greeting}Your Telegram Chat ID is:\n\n"
-        f"`{chat_id}`\n\n"
-        "Copy this → open Trading Signal Desk → click *Setup alerts* → paste it in\\.",
-        parse_mode="MarkdownV2",
+        f"<code>{chat_id}</code>\n\n"
+        "Copy this → open Trading Signal Desk → click <b>Setup alerts</b> → paste it in.",
+        parse_mode="HTML",
     )
     print(f"[bot] /myid → {name} ({chat_id})")
 
