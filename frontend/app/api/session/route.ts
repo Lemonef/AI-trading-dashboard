@@ -4,7 +4,7 @@ import { SUPABASE_URL, supabaseHeaders } from "../../../lib/supabase";
 // Service role key bypasses RLS — safe here (server-only route)
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 function adminHeaders() {
-  const key = SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+  const key = SERVICE_KEY || (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "");
   return { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
 }
 
