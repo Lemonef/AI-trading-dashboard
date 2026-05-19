@@ -46,10 +46,21 @@ export default function UserSetup() {
   async function save() {
     if (!sessionId) return;
     setSaving(true);
+    let resolvedName = name || null;
+    // If name is blank but Telegram ID is set, pull name from another linked session
+    if (!resolvedName && chatId) {
+      try {
+        const r = await fetch(`/api/session?telegram_chat_id=${chatId}`);
+        if (r.ok) {
+          const s = await r.json();
+          if (s?.name) { resolvedName = s.name; setName(s.name); }
+        }
+      } catch {}
+    }
     await fetch("/api/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: sessionId, name: name || null, telegram_chat_id: chatId || null }),
+      body: JSON.stringify({ id: sessionId, name: resolvedName, telegram_chat_id: chatId || null }),
     });
     setSaving(false);
     setSaved(true);

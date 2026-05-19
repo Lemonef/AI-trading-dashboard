@@ -70,14 +70,42 @@ function demoSignal(): Signal {
 
 export async function getWatchlist(sessionId?: string | null): Promise<Set<string>> {
   if (!SUPABASE_URL || !ANON_KEY) return new Set();
+  // Use service role key for session queries to bypass RLS; anon key for watchlist reads
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ANON_KEY;
+  const adminHdrs = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` };
+  const headers = { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` };
   try {
+    // If session has a telegram_chat_id, merge watchlists across all linked sessions
+    let sessionIds: string[] = sessionId ? [sessionId] : [];
+    if (sessionId) {
+      const sUrl = new URL(`${SUPABASE_URL}/rest/v1/user_sessions`);
+      sUrl.searchParams.set("id", `eq.${sessionId}`);
+      sUrl.searchParams.set("select", "telegram_chat_id");
+      const sRes = await fetch(sUrl, { cache: "no-store", headers: adminHdrs });
+      if (sRes.ok) {
+        const sessions = await sRes.json();
+        const tgId = sessions[0]?.telegram_chat_id;
+        if (tgId) {
+          const allUrl = new URL(`${SUPABASE_URL}/rest/v1/user_sessions`);
+          allUrl.searchParams.set("telegram_chat_id", `eq.${tgId}`);
+          allUrl.searchParams.set("select", "id");
+          const allRes = await fetch(allUrl, { cache: "no-store", headers: adminHdrs });
+          if (allRes.ok) {
+            const rows: { id: string }[] = await allRes.json();
+            sessionIds = rows.map((r) => r.id);
+          }
+        }
+      }
+    }
+
     const url = new URL(`${SUPABASE_URL}/rest/v1/watchlist`);
     url.searchParams.set("select", "symbol");
-    if (sessionId) url.searchParams.set("session_id", `eq.${sessionId}`);
-    const res = await fetch(url, {
-      cache: "no-store",
-      headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` },
-    });
+    if (sessionIds.length === 1) {
+      url.searchParams.set("session_id", `eq.${sessionIds[0]}`);
+    } else if (sessionIds.length > 1) {
+      url.searchParams.set("session_id", `in.(${sessionIds.join(",")})`);
+    }
+    const res = await fetch(url, { cache: "no-store", headers });
     if (!res.ok) return new Set();
     const rows: { symbol: string }[] = await res.json();
     return new Set(rows.map((r) => r.symbol));

@@ -28,7 +28,7 @@ def handle_setup(message):
     chat_id = message.chat.id
     name = message.from_user.first_name or ""
     greeting = f"Hi {name}! " if name else ""
-    setup_link = f"{APP_URL}?setup={chat_id}"
+    setup_link = f"{APP_URL}?setup={chat_id}" + (f"&tgname={name}" if name else "")
     bot.reply_to(
         message,
         f"🤖 {greeting}\n\n"

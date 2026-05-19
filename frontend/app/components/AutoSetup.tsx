@@ -20,10 +20,19 @@ export default function AutoSetup() {
         document.cookie = `session_id=${sessionId}; path=/; max-age=31536000; SameSite=Lax`;
       }
 
+      // Name from Telegram bot URL param, fallback to sibling session lookup
+      let name: string | null = searchParams.get("tgname") || null;
+      if (!name) {
+        try {
+          const r = await fetch(`/api/session?telegram_chat_id=${telegramId}`);
+          if (r.ok) { const s = await r.json(); name = s?.name ?? null; }
+        } catch {}
+      }
+
       await fetch("/api/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: sessionId, telegram_chat_id: telegramId }),
+        body: JSON.stringify({ id: sessionId, telegram_chat_id: telegramId, ...(name ? { name } : {}) }),
       });
 
       toast.success(`Telegram connected! ✓`, { duration: 3000 });
