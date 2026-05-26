@@ -1,9 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.analysis_cache import AnalysisCache
 from app.config import get_settings
 from app.models import ScanResult, Signal
-from app.scanner import run_scan
+from app.scanner import analyze_symbol, run_scan
 from app.storage import SignalStore
 
 app = FastAPI(title="AI Trading Scanner", version="0.1.0")
@@ -30,3 +31,21 @@ def list_signals() -> list[Signal]:
 @app.post("/api/scan", response_model=ScanResult)
 async def scan_now() -> ScanResult:
     return await run_scan(get_settings())
+
+
+@app.post("/api/analyze", response_model=Signal)
+async def analyze_market(symbol: str, timeframe: str = "1d") -> Signal:
+    settings = get_settings()
+    cache = AnalysisCache(settings)
+
+    cached = cache.get(symbol, timeframe)
+    if cached:
+        return cached
+
+    try:
+        signal = await analyze_symbol(symbol, timeframe, settings)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+    cache.set(signal)
+    return signal
