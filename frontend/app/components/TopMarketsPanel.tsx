@@ -105,7 +105,7 @@ export default function TopMarketsPanel({ signals }: Props) {
     <section className="card-lift border border-line bg-white">
       {/* DNA chips */}
       <div className="flex gap-1.5 flex-wrap border-b border-line px-4 py-3">
-        {(["rockstar", "sniper", "watcher"] as DNA[]).map((d) => (
+        {(["sniper", "rockstar", "watcher"] as DNA[]).map((d) => (
           <button
             key={d}
             onClick={() => selectDna(d)}

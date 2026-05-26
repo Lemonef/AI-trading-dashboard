@@ -1,5 +1,9 @@
 # Trading Signal Desk
 
+## Context
+Before any task, read `graphify-out/GRAPH_REPORT.md` for architecture context.
+For tasks touching trading logic, signals, entries, or risk — read relevant files in `skills/`: `sniper.md`, `rockstar.md`, `architect.md`, `watcher.md`, `Legends-SKILL.md`, `Investor-DNA-SKILL.md`, `Investor-Decision-Stack-SKILL.md`.
+
 AI-assisted trading dashboard. Scanner runs rules-based analysis, stores signals to Supabase, sends Telegram alerts. Dashboard reads signals and displays them. **No auto-execution.** User must confirm any trade.
 
 ## Stack

@@ -3,7 +3,18 @@
     "allow": [
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(bash *)",
+      "Bash(python -m compileall app/models.py app/trading/rules.py app/alerts.py)",
+      "Bash(python -m pytest tests/ -v)",
+      "PowerShell(New-Item *)",
+      "Bash(npx tsc *)",
+      "PowerShell(Get-NetTCPConnection *)",
+      "Bash(python -c \"from app.scanner import run_scan; from app.data.lunarcrush import fetch_batch_sentiment; from app.data.coingecko import fetch_macro_context; print\\('ok'\\)\")",
+      "Bash(python -c \"from app.cli import main; from app.ai import _groq_signal_summary; print\\('ok'\\)\")",
+      "Read(//usr/local/bin/**)",
+      "Read(//c/Users/user/.local/bin/**)",
+      "Bash(git commit *)"
     ]
   }
 }
