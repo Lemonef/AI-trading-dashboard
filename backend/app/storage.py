@@ -128,6 +128,8 @@ class SignalStore:
         payload = signal.model_dump(mode="json")
         # Never overwrite ai_enhanced on upsert — managed by the summarize pipeline
         payload.pop("ai_enhanced", None)
+        # enrichment is local-only context for AI prompts — not a signals table column
+        payload.pop("enrichment", None)
         if self.supabase_enabled:
             # Try upsert (requires unique constraint on symbol+timeframe)
             response = httpx.post(
