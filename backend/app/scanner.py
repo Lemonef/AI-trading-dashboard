@@ -16,7 +16,7 @@ from app.trading.market_data import (
 from app.trading.rules import build_signal
 
 
-async def run_scan(settings: Settings) -> ScanResult:
+async def run_scan(settings: Settings, manual: bool = False) -> ScanResult:
     store = SignalStore(settings)
     signals: list[Signal] = []
 
@@ -73,8 +73,8 @@ async def run_scan(settings: Settings) -> ScanResult:
         store.save_signal(signal)
         signals.append(signal)
 
-    # Enrich crypto signals with social sentiment
-    if settings.lunarcrush_api_key:
+    # Enrich crypto signals with social sentiment — manual scan only (conserves 25/day free tier)
+    if manual and settings.lunarcrush_api_key:
         from app.data.lunarcrush import fetch_batch_sentiment, is_rate_limited, daily_call_count
         from app.data.coingecko import fetch_macro_context
         crypto_symbols = [s.symbol for s in signals if "/" in s.symbol]

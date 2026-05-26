@@ -11,17 +11,18 @@ export default function ScanButton() {
     setScanning(true);
     const id = toast.loading("Scanning markets…", { duration: Infinity });
     try {
-      const res = await fetch("/api/scan", { method: "POST" });
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+      const res = await fetch(`${apiUrl}/api/scan?manual=true`, { method: "POST" });
       if (!res.ok) throw new Error(`${res.status}`);
       toast.dismiss(id);
-      toast.success("Scan triggered! Reloading in 15s…", { duration: 15000 });
+      toast.success("Scan complete! Reloading in 5s…", { duration: 5000 });
       setTimeout(() => {
         setScanning(false);
         window.location.reload();
-      }, 15000);
+      }, 5000);
     } catch {
       toast.dismiss(id);
-      toast.error("Scan failed. Check GITHUB_TOKEN in Vercel env vars.");
+      toast.error("Scan failed. Is the backend running?");
       setScanning(false);
     }
   }
