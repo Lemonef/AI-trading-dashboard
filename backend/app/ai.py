@@ -74,11 +74,12 @@ async def _groq_signal_summary(signal: Signal, settings: Settings) -> tuple[str,
         + (f"- {macro_line}\n" if macro_line else "")
         + (f"- {sentiment_line}\n" if sentiment_line else "")
         + f"\nReasons: {'; '.join(signal.reasons[:3])}\n\n"
-        "Write exactly 3 sentences:\n"
+        "Write exactly 3 sentences then a score line:\n"
         "1. REGIME (IDS Layer 1+2): trend context + ADX/RSI read\n"
         "2. SETUP (IDS Layer 3): what triggered, what's missing, sentiment if available\n"
-        "3. VERDICT: TP/SL levels + one action note for this DNA profile. End: 'Not financial advice — user must confirm.'\n\n"
-        "Under 120 words. Specific numbers. English only."
+        "3. VERDICT: TP/SL levels + one action note for this DNA profile. End: 'Not financial advice — user must confirm.'\n"
+        "Score: X/10 — one word (e.g. 'Score: 6/10 — fragmented'). Rate overall setup quality 1–10 based on trend strength, trigger clarity, and sentiment alignment.\n\n"
+        "Under 130 words. Specific numbers. English only."
     )
 
     try:

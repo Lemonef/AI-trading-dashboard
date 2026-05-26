@@ -144,6 +144,12 @@ function scoreLabel(score: number): string {
   return "No setup";
 }
 
+function parseAiScore(summary: string): { num: number; label: string } | null {
+  const m = summary.match(/Score:\s*(\d+)\/10\s*[—\-]\s*(\w+)/i);
+  if (!m) return null;
+  return { num: parseInt(m[1], 10), label: m[2] };
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function SignalDetailPage({
@@ -371,11 +377,23 @@ export default async function SignalDetailPage({
           <ProgressBar label="Pattern" filled={bars.pattern} total={2} />
           <ProgressBar label="Trigger" filled={bars.trigger} total={3} />
           <ProgressBar label="Confirm" filled={bars.confirm} total={3} />
-          <div className="pt-1 border-t border-line">
-            <span className="text-sm font-semibold text-ink">
-              Setup Score: {setupScore}/10
-            </span>
-            <span className="ml-2 text-sm text-zinc-500">— {scoreLabel(setupScore)}</span>
+          <div className="pt-1 border-t border-line space-y-1">
+            <div>
+              <span className="text-sm font-semibold text-ink">Rules score: {setupScore}/10</span>
+              <span className="ml-2 text-sm text-zinc-500">— {scoreLabel(setupScore)}</span>
+            </div>
+            {signal.ai_enhanced && (() => {
+              const sc = parseAiScore(signal.summary);
+              if (!sc) return null;
+              const color = sc.num >= 7 ? "text-buy font-semibold" : sc.num >= 5 ? "text-wait font-semibold" : "text-zinc-500 font-semibold";
+              return (
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm ${color}`}>AI score: {sc.num}/10</span>
+                  <span className="text-sm text-zinc-500">— {sc.label}</span>
+                  <span className="rounded bg-buy/10 px-1.5 py-0.5 text-[10px] font-semibold text-buy">✦ AI</span>
+                </div>
+              );
+            })()}
           </div>
         </div>
 

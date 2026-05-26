@@ -94,6 +94,12 @@ function pctStr(target: number | null | undefined, close: number): string {
   return `${p >= 0 ? "+" : ""}${p.toFixed(1)}%`;
 }
 
+function parseAiScore(summary: string): { num: number; label: string } | null {
+  const m = summary.match(/Score:\s*(\d+)\/10\s*[—\-]\s*(\w+)/i);
+  if (!m) return null;
+  return { num: parseInt(m[1], 10), label: m[2] };
+}
+
 function rrRatio(signal: Signal): string {
   if (!signal.tp || !signal.sl) return "—";
   const reward = Math.abs(signal.tp - signal.close);
@@ -332,6 +338,16 @@ export default function SignalsTable({
                 <div className="mt-1 text-[10px] text-zinc-400 tabular-nums">
                   {Math.round(signal.confidence * 100)}%
                 </div>
+                {signal.ai_enhanced && (() => {
+                  const sc = parseAiScore(signal.summary);
+                  if (!sc) return null;
+                  const color = sc.num >= 7 ? "text-buy" : sc.num >= 5 ? "text-wait" : "text-zinc-400";
+                  return (
+                    <div className={`mt-0.5 text-[10px] font-medium tabular-nums ${color}`}>
+                      AI {sc.num}/10 — {sc.label}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Live price + today % */}
