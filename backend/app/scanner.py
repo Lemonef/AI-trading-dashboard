@@ -1,7 +1,7 @@
 import asyncio
 
 from app.ai import summarize_signal
-from app.alerts import _fmt, register_bot_commands, send_alert_batch, send_daily_digest, send_price_alert_hit
+from app.alerts import _fmt, register_bot_commands, send_alert_batch, send_price_alert_hit
 from app.config import Settings
 from app.models import ScanResult, Signal
 from app.storage import SignalStore
