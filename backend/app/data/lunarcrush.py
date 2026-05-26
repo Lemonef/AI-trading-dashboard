@@ -1,8 +1,12 @@
 """LunarCrush API v4 connector — social sentiment for crypto."""
+import time
 import httpx
 
 _BASE = "https://lunarcrush.com/api4/public"
 _TIMEOUT = 10
+_TTL = 3600  # 1 hour cache
+
+_cache: dict[str, tuple[dict, float]] = {}  # symbol -> (data, expires_at)
 
 
 def _crypto_slug(symbol: str) -> str | None:
@@ -20,6 +24,11 @@ async def fetch_coin_sentiment(symbol: str, api_key: str) -> dict:
     slug = _crypto_slug(symbol)
     if not slug or not api_key:
         return {}
+
+    now = time.time()
+    if symbol in _cache and _cache[symbol][1] > now:
+        return _cache[symbol][0]
+
     try:
         async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
             res = await client.get(
@@ -29,12 +38,14 @@ async def fetch_coin_sentiment(symbol: str, api_key: str) -> dict:
             if not res.is_success:
                 return {}
             data = res.json().get("data", {})
-            return {
-                "galaxy_score": data.get("galaxy_score"),        # 1–100, higher = healthier
-                "alt_rank": data.get("alt_rank"),                 # 1–5000, lower = stronger
-                "sentiment": data.get("sentiment"),               # bullish % 0–100
+            result = {
+                "galaxy_score": data.get("galaxy_score"),
+                "alt_rank": data.get("alt_rank"),
+                "sentiment": data.get("sentiment"),
                 "social_volume": data.get("social_volume_24h"),
             }
+            _cache[symbol] = (result, now + _TTL)
+            return result
     except Exception:
         return {}
 
