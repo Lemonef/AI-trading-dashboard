@@ -4,8 +4,14 @@ from datetime import date
 from app.config import Settings
 from app.models import Signal
 
-# Rate limit: free tier = 15 req/min → 1 every 4s to stay safe
-_RATE_LIMIT_SLEEP = 4.0
+# Groq free tier: 30 req/min BUT only 6,000 TPM on llama-3.1-8b-instant.
+# Each call is ~2500 tokens (2200 input + 300 output) → max 2.4 req/min before TPM exhausted.
+# 60s / 2.4 = 25s minimum spacing. Use 26s to stay safely under.
+_RATE_LIMIT_SLEEP = 26.0
+
+# Circuit breakers — set True once quota exhausted to skip remaining calls
+_groq_exhausted = False   # daily limit (14,400 req/day)
+_gemini_exhausted = False  # daily quota (RESOURCE_EXHAUSTED)
 
 
 def _has_ai(settings: Settings) -> bool:
@@ -33,6 +39,12 @@ async def _ai_summary(signal: Signal, settings: Settings) -> tuple[str, bool]:
 
 
 async def _groq_signal_summary(signal: Signal, settings: Settings) -> tuple[str, bool]:
+    global _groq_exhausted
+    if _groq_exhausted:
+        if settings.gemini_api_key:
+            return await _gemini_signal_summary(signal, settings)
+        return signal.summary, False
+
     import httpx
 
     ind = signal.indicators or {}
@@ -96,7 +108,18 @@ async def _groq_signal_summary(signal: Signal, settings: Settings) -> tuple[str,
                 },
             )
             if res.status_code == 429:
-                print(f"  [Groq 429] {signal.symbol} — rate limit hit")
+                retry_after = int(res.headers.get("retry-after", 0))
+                # Check if daily quota hit (no retry-after or very large value)
+                err_body = res.text.lower()
+                is_daily = "daily" in err_body or "exceeded" in err_body or retry_after > 120
+                if is_daily:
+                    _groq_exhausted = True
+                    print(f"  [Groq 429] {signal.symbol} — daily quota exhausted, circuit open")
+                else:
+                    # Default 60s: TPM exhaustion refills in ~60s even when header is absent
+                    wait = retry_after if retry_after > 0 else 60
+                    print(f"  [Groq 429] {signal.symbol} — rate limit, sleeping {wait}s")
+                    await asyncio.sleep(wait)
                 from app.alerts import send_system_alert
                 await send_system_alert(
                     f"⚠️ Groq AI rate limit hit ({signal.symbol})\n"
@@ -122,6 +145,11 @@ async def _groq_signal_summary(signal: Signal, settings: Settings) -> tuple[str,
 
 
 async def _gemini_signal_summary(signal: Signal, settings: Settings) -> tuple[str, bool]:
+    global _gemini_exhausted
+    if _gemini_exhausted:
+        print(f"  [Gemini] skipping {signal.symbol} — quota circuit open")
+        return signal.summary, False
+
     max_retries = 3
     for attempt in range(max_retries):
         try:
@@ -165,18 +193,31 @@ async def _gemini_signal_summary(signal: Signal, settings: Settings) -> tuple[st
 
         except Exception as exc:
             err = str(exc)
-            if "429" in err and attempt < max_retries - 1:
-                delay = 15 * (attempt + 1)
-                print(f"  [Gemini 429] {signal.symbol} — waiting {delay}s…")
-                if attempt == 0:
+            if "429" in err:
+                is_quota = "resource_exhausted" in err.lower() or "quota" in err.lower()
+                if is_quota:
+                    # Daily quota gone — open circuit, no point retrying
+                    _gemini_exhausted = True
+                    print(f"  [Gemini] quota exhausted for {signal.symbol} — circuit open, skipping remaining")
                     from app.alerts import send_system_alert
                     await send_system_alert(
-                        f"⚠️ Gemini AI rate limit hit ({signal.symbol})\n"
-                        "Retrying with backoff. If this persists, free tier quota may be exhausted.",
+                        f"⚠️ Gemini daily quota exhausted ({signal.symbol})\n"
+                        "Skipping Gemini for all remaining signals this run.",
                         settings,
                     )
-                await asyncio.sleep(delay)
-                continue
+                    return signal.summary, False
+                if attempt < max_retries - 1:
+                    delay = 15 * (attempt + 1)
+                    print(f"  [Gemini 429] {signal.symbol} — rate limit, waiting {delay}s…")
+                    if attempt == 0:
+                        from app.alerts import send_system_alert
+                        await send_system_alert(
+                            f"⚠️ Gemini AI rate limit hit ({signal.symbol})\n"
+                            "Retrying with backoff.",
+                            settings,
+                        )
+                    await asyncio.sleep(delay)
+                    continue
             print(f"  [Gemini ERROR] {signal.symbol}: {type(exc).__name__}: {err[:120]}")
             return signal.summary, False
 

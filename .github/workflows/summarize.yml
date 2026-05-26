@@ -6,6 +6,11 @@ on:
 permissions:
   contents: read
 
+# Prevent two summarize runs from overlapping — both would burn Groq TPM simultaneously
+concurrency:
+  group: regenerate-summaries
+  cancel-in-progress: false
+
 jobs:
   summarize:
     runs-on: ubuntu-latest
