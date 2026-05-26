@@ -130,6 +130,36 @@ def _default_summary(symbol: str, trend: Trend, action: Action, reasons: list[st
     return f"{symbol}: {verdict}. Trend is {trend}. {'; '.join(reasons[:2])}."
 
 
+def apply_sentiment_boost(confidence: float, enrichment: dict, action: str) -> float:
+    """Adjust confidence using LunarCrush data. Max +0.10 boost, capped at 0.95."""
+    boost = 0.0
+    galaxy = enrichment.get("galaxy_score")
+    sentiment_pct = enrichment.get("sentiment")
+    alt_rank = enrichment.get("alt_rank")
+
+    if galaxy is not None:
+        if galaxy >= 70:
+            boost += 0.05
+        elif galaxy >= 50:
+            boost += 0.02
+
+    if sentiment_pct is not None:
+        if action == "long_setup" and sentiment_pct >= 65:
+            boost += 0.04
+        elif action == "short_setup" and sentiment_pct <= 35:
+            boost += 0.04
+        elif action in ("long_setup", "short_setup") and 45 <= sentiment_pct <= 55:
+            boost -= 0.02  # mixed sentiment reduces conviction
+
+    if alt_rank is not None:
+        if alt_rank <= 50:
+            boost += 0.03
+        elif alt_rank <= 200:
+            boost += 0.01
+
+    return round(min(confidence + boost, 0.95), 2)
+
+
 def _num(value: object) -> float | None:
     if value is None:
         return None

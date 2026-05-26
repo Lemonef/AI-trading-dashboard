@@ -13,7 +13,7 @@ from app.trading.market_data import (
     fetch_ohlcv_yfinance_batch,
     is_crypto_symbol,
 )
-from app.trading.rules import build_signal
+from app.trading.rules import apply_sentiment_boost, build_signal
 
 
 async def run_scan(settings: Settings, sentiment: bool = False) -> ScanResult:
@@ -23,6 +23,31 @@ async def run_scan(settings: Settings, sentiment: bool = False) -> ScanResult:
     # Fetch watchlist — alerts only fire for these symbols
     watchlist = store.list_watchlist()
     print(f"Watchlist: {len(watchlist)} symbols")
+
+    # Pre-fetch sentiment data before signal loop so confidence + AI both use it
+    sentiment_map: dict[str, dict] = {}
+    macro: dict = {}
+    if settings.lunarcrush_api_key:
+        from app.data.lunarcrush import fetch_batch_sentiment, is_rate_limited, daily_call_count
+        from app.data.coingecko import fetch_macro_context
+        from app.data.sentiment_cache import SentimentStore
+        crypto_symbols = [s for s in settings.symbols if "/" in s]
+        if crypto_symbols:
+            scache = SentimentStore(settings)
+            macro = await fetch_macro_context()
+            if sentiment:
+                sentiment_map = await fetch_batch_sentiment(crypto_symbols, settings.lunarcrush_api_key)
+                if sentiment_map:
+                    scache.set_batch(sentiment_map)
+                if is_rate_limited():
+                    await send_system_alert(
+                        "⚠️ LunarCrush daily API limit hit\n"
+                        f"Used {daily_call_count()} calls today (free tier: 25/day).\n"
+                        "Sentiment enrichment skipped. Resets tomorrow.",
+                        settings,
+                    )
+            else:
+                sentiment_map = scache.get_batch(crypto_symbols)
 
     # Batch download all non-crypto symbols in one API call
     non_crypto = [s for s in settings.symbols if not is_crypto_symbol(s)]
@@ -69,45 +94,20 @@ async def run_scan(settings: Settings, sentiment: bool = False) -> ScanResult:
             continue
 
         signal = build_signal(market_symbol, exchange_id, settings.timeframe, enriched, previous_action, previous_trend)
+
+        # Attach sentiment enrichment before AI call so prompt and confidence both use it
+        enrichment: dict = {}
+        if signal.symbol in sentiment_map:
+            enrichment.update(sentiment_map[signal.symbol])
+        if macro:
+            enrichment.update(macro)
+        if enrichment:
+            signal.enrichment = enrichment
+            signal.confidence = apply_sentiment_boost(signal.confidence, enrichment, signal.action)
+
         signal.summary = await summarize_signal(signal, settings)
         store.save_signal(signal)
         signals.append(signal)
-
-    # Enrich crypto signals with social sentiment
-    if settings.lunarcrush_api_key:
-        from app.data.lunarcrush import fetch_batch_sentiment, is_rate_limited, daily_call_count
-        from app.data.coingecko import fetch_macro_context
-        from app.data.sentiment_cache import SentimentStore
-        crypto_symbols = [s.symbol for s in signals if "/" in s.symbol]
-        if crypto_symbols:
-            scache = SentimentStore(settings)
-            macro = await fetch_macro_context()
-
-            if sentiment:
-                # Fresh fetch from API, write to Supabase cache
-                sentiment_map = await fetch_batch_sentiment(crypto_symbols, settings.lunarcrush_api_key)
-                if sentiment_map:
-                    scache.set_batch(sentiment_map)
-                if is_rate_limited():
-                    await send_system_alert(
-                        "⚠️ LunarCrush daily API limit hit\n"
-                        f"Used {daily_call_count()} calls today (free tier: 25/day).\n"
-                        "Sentiment enrichment skipped. Resets tomorrow.",
-                        settings,
-                    )
-            else:
-                # Read from Supabase cache only — no API calls
-                sentiment_map = scache.get_batch(crypto_symbols)
-
-            for signal in signals:
-                enrichment = {}
-                if signal.symbol in sentiment_map:
-                    enrichment.update(sentiment_map[signal.symbol])
-                if macro:
-                    enrichment.update(macro)
-                if enrichment:
-                    signal.enrichment = enrichment
-                    store.save_signal(signal)  # re-save with enrichment
 
     # Keep command menu registered
     await register_bot_commands(settings)
