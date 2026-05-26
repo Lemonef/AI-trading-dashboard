@@ -33,6 +33,12 @@ async def scan_now() -> ScanResult:
     return await run_scan(get_settings())
 
 
+@app.post("/api/discover")
+async def discover_now() -> dict:
+    from app.discovery.service import run_discovery
+    return await run_discovery(get_settings())
+
+
 @app.post("/api/analyze", response_model=Signal)
 async def analyze_market(symbol: str, timeframe: str = "1d") -> Signal:
     settings = get_settings()
