@@ -9,17 +9,16 @@ export default function ScanButton() {
 
   async function scan() {
     setScanning(true);
-    const id = toast.loading("Scanning markets…", { duration: Infinity });
+    const id = toast.loading("Triggering scan…", { duration: Infinity });
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-      const res = await fetch(`${apiUrl}/api/scan?manual=true`, { method: "POST" });
+      const res = await fetch("/api/scan", { method: "POST" });
       if (!res.ok) throw new Error(`${res.status}`);
       toast.dismiss(id);
-      toast.success("Scan complete! Reloading in 5s…", { duration: 5000 });
+      toast.success("Scan triggered! Reloading in 15s…", { duration: 15000 });
       setTimeout(() => {
         setScanning(false);
         window.location.reload();
-      }, 5000);
+      }, 15000);
     } catch {
       toast.dismiss(id);
       toast.error("Scan failed. Is the backend running?");
