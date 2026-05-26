@@ -1,0 +1,52 @@
+"""LunarCrush API v4 connector — social sentiment for crypto."""
+import httpx
+
+_BASE = "https://lunarcrush.com/api4/public"
+_TIMEOUT = 10
+
+
+def _crypto_slug(symbol: str) -> str | None:
+    """BTC/USDT → BTC. Non-crypto returns None."""
+    if "/" not in symbol:
+        return None
+    return symbol.split("/")[0].upper()
+
+
+async def fetch_coin_sentiment(symbol: str, api_key: str) -> dict:
+    """
+    Returns dict with: galaxy_score, alt_rank, sentiment, social_volume.
+    Empty dict on error or non-crypto symbol.
+    """
+    slug = _crypto_slug(symbol)
+    if not slug or not api_key:
+        return {}
+    try:
+        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+            res = await client.get(
+                f"{_BASE}/coins/{slug}/v1",
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+            if not res.is_success:
+                return {}
+            data = res.json().get("data", {})
+            return {
+                "galaxy_score": data.get("galaxy_score"),        # 1–100, higher = healthier
+                "alt_rank": data.get("alt_rank"),                 # 1–5000, lower = stronger
+                "sentiment": data.get("sentiment"),               # bullish % 0–100
+                "social_volume": data.get("social_volume_24h"),
+            }
+    except Exception:
+        return {}
+
+
+async def fetch_batch_sentiment(symbols: list[str], api_key: str) -> dict[str, dict]:
+    """Fetch sentiment for multiple crypto symbols. Returns {symbol: sentiment_dict}."""
+    if not api_key:
+        return {}
+    import asyncio
+    tasks = {s: fetch_coin_sentiment(s, api_key) for s in symbols if "/" in s}
+    results = await asyncio.gather(*tasks.values(), return_exceptions=True)
+    return {
+        symbol: (result if isinstance(result, dict) else {})
+        for symbol, result in zip(tasks.keys(), results)
+    }

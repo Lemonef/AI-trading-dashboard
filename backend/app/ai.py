@@ -42,13 +42,43 @@ async def _groq_signal_summary(signal: Signal, settings: Settings) -> tuple[str,
     rsi = ind.get("rsi") or 50
     vol = ind.get("volume_ratio") or 0
 
+    enrichment = signal.enrichment if hasattr(signal, "enrichment") else {}
+    galaxy = enrichment.get("galaxy_score")
+    alt_rank = enrichment.get("alt_rank")
+    sentiment_pct = enrichment.get("sentiment")
+    fear_greed = enrichment.get("fear_greed_value")
+    fear_greed_label = enrichment.get("fear_greed_label", "")
+    btc_dom = enrichment.get("btc_dominance")
+
+    sentiment_line = ""
+    if galaxy is not None:
+        sentiment_line = (
+            f"Social: Galaxy Score {galaxy}/100, Alt Rank #{alt_rank}, "
+            f"Sentiment {sentiment_pct}% bullish. "
+        )
+    macro_line = ""
+    if fear_greed is not None:
+        macro_line = f"Macro: Fear/Greed {fear_greed} ({fear_greed_label}), BTC dom {btc_dom}%. "
+
+    skill_context = _load_skills(settings)
+
     prompt = (
-        "You are a trading analyst using the Investor Decision Stack (IDS) framework.\n\n"
-        f"Write exactly 3 sentences for {signal.symbol}:\n"
-        f"1. REGIME: trend={signal.trend}, EMA50 {'above' if ema50 > ema200 else 'below'} EMA200, ADX {round(adx)} ({'strong' if adx >= 25 else 'weak'}), RSI {round(rsi)}.\n"
-        f"2. SETUP: signal={signal.action.replace('_', ' ')}, confidence={round(signal.confidence * 100)}%, volume {round(vol, 1)}x. Key conditions met or missing.\n"
-        f"3. VERDICT: TP={signal.tp}, SL={signal.sl}. End with 'Not financial advice — user must confirm.'\n\n"
-        "Under 90 words. Specific numbers. English only."
+        f"{skill_context}\n\n"
+        "---\n\n"
+        "You are a trading analyst. Using the IDS framework and Investor DNA above, "
+        f"write a focused signal brief for {signal.symbol} tailored to DNA: {settings.investor_dna}.\n\n"
+        f"DATA:\n"
+        f"- Trend: {signal.trend} | Action: {signal.action.replace('_', ' ')} | Confidence: {round(signal.confidence * 100)}%\n"
+        f"- EMA50 {'above' if ema50 > ema200 else 'below'} EMA200 | ADX {round(adx)} ({'strong' if adx >= 25 else 'weak'}) | RSI {round(rsi)} | Vol {round(vol, 1)}x\n"
+        f"- TP: {signal.tp} | SL: {signal.sl}\n"
+        + (f"- {macro_line}\n" if macro_line else "")
+        + (f"- {sentiment_line}\n" if sentiment_line else "")
+        + f"\nReasons: {'; '.join(signal.reasons[:3])}\n\n"
+        "Write exactly 3 sentences:\n"
+        "1. REGIME (IDS Layer 1+2): trend context + ADX/RSI read\n"
+        "2. SETUP (IDS Layer 3): what triggered, what's missing, sentiment if available\n"
+        "3. VERDICT: TP/SL levels + one action note for this DNA profile. End: 'Not financial advice — user must confirm.'\n\n"
+        "Under 120 words. Specific numbers. English only."
     )
 
     try:
@@ -60,7 +90,7 @@ async def _groq_signal_summary(signal: Signal, settings: Settings) -> tuple[str,
                 json={
                     "model": "llama-3.1-8b-instant",
                     "messages": [{"role": "user", "content": prompt}],
-                    "max_tokens": 200,
+                    "max_tokens": 300,
                     "temperature": 0.4,
                 },
             )

@@ -97,3 +97,36 @@ create policy "signals are publicly readable"
   for select
   to anon, authenticated
   using (true);
+
+-- Market relevance scores (populated by discovery cron)
+create table if not exists public.market_scores (
+  symbol        text not null,
+  asset_class   text not null,
+  score         float not null default 0,
+  trend         text,
+  adx           float,
+  rsi           float,
+  volume_ratio  float,
+  trend_strength float,
+  volatility    float,
+  session_active bool default false,
+  scanned_at    timestamptz not null default now(),
+  primary key (symbol)
+);
+
+create index if not exists market_scores_score_idx on public.market_scores (score desc);
+create index if not exists market_scores_asset_class_idx on public.market_scores (asset_class);
+
+-- Analysis cache (on-demand AI analysis results)
+create table if not exists public.analysis_cache (
+  id            uuid primary key default gen_random_uuid(),
+  symbol        text not null,
+  timeframe     text not null,
+  date          date not null,
+  signal        jsonb not null,
+  created_at    timestamptz not null default now(),
+  unique (symbol, timeframe, date)
+);
+
+create index if not exists analysis_cache_lookup_idx
+  on public.analysis_cache (symbol, timeframe, date);
