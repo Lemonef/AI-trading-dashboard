@@ -28,6 +28,7 @@ class Signal(BaseModel):
     ai_enhanced: bool = False
     indicators: dict[str, float | None] = Field(default_factory=dict)
     reasons: list[str] = Field(default_factory=list)
+    enrichment: dict[str, float | str | None] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

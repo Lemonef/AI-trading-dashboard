@@ -1,3 +1,5 @@
+import asyncio
+
 from app.ai import summarize_signal
 from app.alerts import _fmt, register_bot_commands, send_alert_batch, send_daily_digest, send_price_alert_hit
 from app.config import Settings
@@ -70,6 +72,26 @@ async def run_scan(settings: Settings) -> ScanResult:
         signal.summary = await summarize_signal(signal, settings)
         store.save_signal(signal)
         signals.append(signal)
+
+    # Enrich crypto signals with social sentiment
+    if settings.lunarcrush_api_key:
+        from app.data.lunarcrush import fetch_batch_sentiment
+        from app.data.coingecko import fetch_macro_context
+        crypto_symbols = [s.symbol for s in signals if "/" in s.symbol]
+        if crypto_symbols:
+            sentiment_map, macro = await asyncio.gather(
+                fetch_batch_sentiment(crypto_symbols, settings.lunarcrush_api_key),
+                fetch_macro_context(),
+            )
+            for signal in signals:
+                enrichment = {}
+                if signal.symbol in sentiment_map:
+                    enrichment.update(sentiment_map[signal.symbol])
+                if macro:
+                    enrichment.update(macro)
+                if enrichment:
+                    signal.enrichment = enrichment
+                    store.save_signal(signal)  # re-save with enrichment
 
     # Keep command menu registered
     await register_bot_commands(settings)
