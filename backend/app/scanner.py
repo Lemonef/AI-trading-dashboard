@@ -7,6 +7,7 @@ from app.trading.indicators import enrich_indicators
 from app.trading.market_data import (
     demo_ohlcv,
     fetch_ohlcv_with_fallback,
+    fetch_ohlcv_yfinance,
     fetch_ohlcv_yfinance_batch,
     is_crypto_symbol,
 )
@@ -48,7 +49,6 @@ async def run_scan(settings: Settings) -> ScanResult:
                 exchange_id = "yfinance"
                 market_symbol = symbol
             else:
-                from app.trading.market_data import fetch_ohlcv_yfinance
                 candles = fetch_ohlcv_yfinance(symbol, settings.timeframe, settings.ohlcv_limit)
                 exchange_id = "yfinance"
                 market_symbol = symbol
@@ -117,3 +117,31 @@ async def run_scan(settings: Settings) -> ScanResult:
         changed=sum(1 for signal in signals if signal.changed or signal.trend_changed),
         signals=signals,
     )
+
+
+async def analyze_symbol(symbol: str, timeframe: str, settings: Settings) -> Signal:
+    """Single-symbol analysis pipeline. No save, no alerts. Used by /api/analyze."""
+    from app.trading.indicators import enrich_indicators
+    from app.trading.rules import build_signal
+
+    try:
+        if is_crypto_symbol(symbol):
+            candles, exchange_id, market_symbol = fetch_ohlcv_with_fallback(
+                settings.exchanges, symbol, timeframe, settings.ohlcv_limit
+            )
+        else:
+            candles = fetch_ohlcv_yfinance(symbol, timeframe, settings.ohlcv_limit)
+            exchange_id = "yfinance"
+            market_symbol = symbol
+    except Exception:
+        if not settings.allow_demo_data:
+            raise
+        candles = demo_ohlcv(symbol, settings.ohlcv_limit)
+        exchange_id = "demo"
+        market_symbol = symbol
+
+    enriched = enrich_indicators(candles)
+    signal = build_signal(market_symbol, exchange_id, timeframe, enriched, None, None)
+    if hasattr(signal, "summary"):
+        signal.summary = await summarize_signal(signal, settings)
+    return signal

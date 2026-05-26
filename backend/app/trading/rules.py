@@ -133,7 +133,10 @@ def _default_summary(symbol: str, trend: Trend, action: Action, reasons: list[st
 def _num(value: object) -> float | None:
     if value is None:
         return None
-    number = float(value)
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
     if math.isnan(number):
         return None
     return number
