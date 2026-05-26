@@ -76,7 +76,7 @@ export default function TradingViewWidget({ symbol, defaultInterval = "1D" }: Pr
       </div>
 
       {!collapsed && (
-        <div ref={containerRef} style={{ height: 380 }} />
+        <div ref={containerRef} className="tradingview-widget-container" style={{ height: 380, width: "100%" }} />
       )}
     </div>
   );
