@@ -1,8 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import StrategyView from "../../components/StrategyView";
+import TradingViewWidget from "../../components/TradingViewWidget";
 import { ArrowLeft, TrendingDown, TrendingUp } from "lucide-react";
 import { getSignals, slugToSymbol, type Signal } from "../../../lib/api";
+import { symbolToTradingView } from "../../../lib/tradingview";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -227,6 +229,11 @@ export default async function SignalDetailPage({
             <span>🤖</span>
             <span>No AI analysis yet for this signal. Click <strong className="text-ink">AI Summary</strong> on the dashboard to generate.</span>
           </div>
+        )}
+
+        {/* ── TradingView chart ─────────────────────────────────────────── */}
+        {symbolToTradingView(signal.symbol) && (
+          <TradingViewWidget symbol={symbolToTradingView(signal.symbol)!} />
         )}
 
         {/* ── Header card ─────────────────────────────────────────────────── */}
