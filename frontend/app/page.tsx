@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { cookies } from "next/headers";
-import { Activity, Bell, Brain, ShieldCheck, Target, Zap } from "lucide-react";
-import { getSignals, getWatchlist, getDailySummary, symbolToSlug, type Signal } from "../lib/api";
+import { Activity, Bell, ShieldCheck, Target } from "lucide-react";
+import { getSignals, getWatchlist, getDailySummary, type Signal } from "../lib/api";
 import ScanButton from "./components/ScanButton";
 import SummarizeButton from "./components/SummarizeButton";
 import SignalsTable from "./components/SignalsTable";
 import DailyReport from "./components/DailyReport";
 import DnaSelector from "./components/DnaSelector";
+import TopMarketsPanel from "./components/TopMarketsPanel";
 
 const actionLabels: Record<Signal["action"], string> = {
   long_setup: "Long setup",
@@ -113,49 +113,7 @@ export default async function Home() {
         {/* Sidebar */}
         <aside className="space-y-4 stagger">
 
-          <section className="card-lift border border-line bg-white p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">
-                <Brain size={12} />Top Signal
-              </div>
-              {top && (
-                top.ai_enhanced
-                  ? <span className="rounded bg-buy/10 px-1.5 py-0.5 text-[10px] font-semibold text-buy">✦ AI</span>
-                  : <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400">Template</span>
-              )}
-            </div>
-            <h2 className="mt-2.5 text-base font-semibold">{top?.symbol ?? "No signals"}</h2>
-            {top?.ai_enhanced && top.created_at && (
-              <p className="mt-0.5 text-[10px] text-zinc-400 tabular-nums">
-                AI updated {new Date(top.created_at).toLocaleString("en-US", {
-                  month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false,
-                })}
-              </p>
-            )}
-            <p className="mt-1.5 text-sm leading-[1.65] text-zinc-600">
-              {top?.summary ?? "Run scanner to generate first read."}
-            </p>
-          </section>
-
-          {activeSetups.length > 1 && (
-            <section className="border border-line bg-white p-4">
-              <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">
-                <Zap size={12} />Active Setups
-              </div>
-              <ul className="mt-3 space-y-2">
-                {activeSetups.map((s) => (
-                  <li key={s.symbol} className="flex items-center justify-between text-sm">
-                    <Link href={`/signals/${symbolToSlug(s.symbol)}`} className="font-semibold hover:underline">
-                      {s.symbol}
-                    </Link>
-                    <span className={`border px-1.5 py-0.5 text-[11px] font-semibold ${toneFor(s.action)}`}>
-                      {actionLabels[s.action]}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
+          <TopMarketsPanel />
 
           {top && Object.keys(top.indicators ?? {}).length > 0 && (
             <section className="border border-line bg-white p-4">
