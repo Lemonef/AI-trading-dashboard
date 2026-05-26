@@ -81,6 +81,10 @@ create table if not exists public.signals (
   created_at timestamptz not null default now()
 );
 
+alter table public.signals add column if not exists previous_action text;
+alter table public.signals add column if not exists previous_trend text;
+alter table public.signals add column if not exists ai_enhanced boolean not null default false;
+
 -- Upsert key: one row per symbol+timeframe (scanner updates in place)
 create unique index if not exists signals_symbol_timeframe_unique
   on public.signals (symbol, timeframe);

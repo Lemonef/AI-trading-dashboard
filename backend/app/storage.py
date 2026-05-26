@@ -130,6 +130,9 @@ class SignalStore:
         payload.pop("ai_enhanced", None)
         # enrichment is local-only context for AI prompts — not a signals table column
         payload.pop("enrichment", None)
+        # new fields — strip until schema migration is run
+        payload.pop("previous_action", None)
+        payload.pop("previous_trend", None)
         if self.supabase_enabled:
             # Try upsert (requires unique constraint on symbol+timeframe)
             response = httpx.post(
