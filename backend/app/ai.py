@@ -94,6 +94,18 @@ async def _groq_signal_summary(signal: Signal, settings: Settings) -> tuple[str,
                     "temperature": 0.4,
                 },
             )
+            if res.status_code == 429:
+                print(f"  [Groq 429] {signal.symbol} — rate limit hit")
+                from app.alerts import send_system_alert
+                await send_system_alert(
+                    f"⚠️ Groq AI rate limit hit ({signal.symbol})\n"
+                    "Free tier: 30 req/min, 14,400 req/day on llama-3.1-8b.\n"
+                    "Falling back to Gemini if available.",
+                    settings,
+                )
+                if settings.gemini_api_key:
+                    return await _gemini_signal_summary(signal, settings)
+                return signal.summary, False
             res.raise_for_status()
             text = res.json()["choices"][0]["message"]["content"].strip()
             if text:
@@ -153,9 +165,15 @@ async def _gemini_signal_summary(signal: Signal, settings: Settings) -> tuple[st
         except Exception as exc:
             err = str(exc)
             if "429" in err and attempt < max_retries - 1:
-                # Extract retry delay from error or use exponential backoff
                 delay = 15 * (attempt + 1)
                 print(f"  [Gemini 429] {signal.symbol} — waiting {delay}s…")
+                if attempt == 0:
+                    from app.alerts import send_system_alert
+                    await send_system_alert(
+                        f"⚠️ Gemini AI rate limit hit ({signal.symbol})\n"
+                        "Retrying with backoff. If this persists, free tier quota may be exhausted.",
+                        settings,
+                    )
                 await asyncio.sleep(delay)
                 continue
             print(f"  [Gemini ERROR] {signal.symbol}: {type(exc).__name__}: {err[:120]}")

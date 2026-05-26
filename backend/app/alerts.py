@@ -12,6 +12,19 @@ def _fmt(value: float | None) -> str:
 
 
 
+async def send_system_alert(message: str, settings: Settings) -> None:
+    """Send a system/ops notification (rate limits, quota warnings) to Telegram."""
+    if not settings.telegram_bot_token or not settings.telegram_chat_id:
+        print(f"[SYSTEM ALERT] {message}")
+        return
+    url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage"
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            await client.post(url, json={"chat_id": settings.telegram_chat_id, "text": message})
+    except Exception:
+        print(f"[SYSTEM ALERT — send failed] {message}")
+
+
 async def register_bot_commands(settings: Settings) -> None:
     """Set bot command list visible when user types / in chat."""
     if not settings.telegram_bot_token:

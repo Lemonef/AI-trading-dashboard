@@ -8,6 +8,19 @@ _TTL = 3600  # 1 hour cache
 
 _cache: dict[str, tuple[dict, float]] = {}  # symbol -> (data, expires_at)
 
+_daily_calls: list[str] = []  # dates of each actual API call (e.g. "2026-05-26")
+_rate_limited: bool = False    # set True when 429 received
+
+
+def daily_call_count() -> int:
+    from datetime import date
+    today = date.today().isoformat()
+    return sum(1 for d in _daily_calls if d == today)
+
+
+def is_rate_limited() -> bool:
+    return _rate_limited
+
 
 def _crypto_slug(symbol: str) -> str | None:
     """BTC/USDT → BTC. Non-crypto returns None."""
@@ -35,8 +48,15 @@ async def fetch_coin_sentiment(symbol: str, api_key: str) -> dict:
                 f"{_BASE}/coins/{slug}/v1",
                 headers={"Authorization": f"Bearer {api_key}"},
             )
+            if res.status_code == 429:
+                global _rate_limited
+                _rate_limited = True
+                print(f"  [LunarCrush 429] daily limit hit — {daily_call_count()} calls today")
+                return {}
             if not res.is_success:
                 return {}
+            from datetime import date
+            _daily_calls.append(date.today().isoformat())
             data = res.json().get("data", {})
             result = {
                 "galaxy_score": data.get("galaxy_score"),

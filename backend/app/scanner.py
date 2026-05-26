@@ -1,7 +1,7 @@
 import asyncio
 
 from app.ai import summarize_signal
-from app.alerts import _fmt, register_bot_commands, send_alert_batch, send_price_alert_hit
+from app.alerts import _fmt, register_bot_commands, send_alert_batch, send_price_alert_hit, send_system_alert
 from app.config import Settings
 from app.models import ScanResult, Signal
 from app.storage import SignalStore
@@ -75,7 +75,7 @@ async def run_scan(settings: Settings) -> ScanResult:
 
     # Enrich crypto signals with social sentiment
     if settings.lunarcrush_api_key:
-        from app.data.lunarcrush import fetch_batch_sentiment
+        from app.data.lunarcrush import fetch_batch_sentiment, is_rate_limited, daily_call_count
         from app.data.coingecko import fetch_macro_context
         crypto_symbols = [s.symbol for s in signals if "/" in s.symbol]
         if crypto_symbols:
@@ -83,6 +83,13 @@ async def run_scan(settings: Settings) -> ScanResult:
                 fetch_batch_sentiment(crypto_symbols, settings.lunarcrush_api_key),
                 fetch_macro_context(),
             )
+            if is_rate_limited():
+                await send_system_alert(
+                    "⚠️ LunarCrush daily API limit hit\n"
+                    f"Used {daily_call_count()} calls today (free tier: 25/day).\n"
+                    "Sentiment enrichment skipped for remaining symbols. Resets tomorrow.",
+                    settings,
+                )
             for signal in signals:
                 enrichment = {}
                 if signal.symbol in sentiment_map:
@@ -134,9 +141,22 @@ async def run_scan(settings: Settings) -> ScanResult:
             await send_price_alert_hit(alert, price, triggered, alert_settings)
             store.trigger_price_alert(alert["id"])
 
+    changed_count = sum(1 for signal in signals if signal.changed or signal.trend_changed)
+    active_setups = [s for s in signals if s.action in ("long_setup", "short_setup")]
+    active_setups.sort(key=lambda s: s.confidence, reverse=True)
+
+    lines = [
+        f"✅ Scan complete — {len(signals)} markets, {changed_count} changed",
+        f"🎯 Active setups: {len(active_setups)}",
+    ]
+    for s in active_setups[:3]:
+        emoji = "🟢" if s.action == "long_setup" else "🔴"
+        lines.append(f"  {emoji} {s.symbol} · {round(s.confidence * 100)}% · TP {_fmt(s.tp)} SL {_fmt(s.sl)}")
+    await send_system_alert("\n".join(lines), settings)
+
     return ScanResult(
         scanned=len(signals),
-        changed=sum(1 for signal in signals if signal.changed or signal.trend_changed),
+        changed=changed_count,
         signals=signals,
     )
 
