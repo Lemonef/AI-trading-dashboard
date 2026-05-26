@@ -16,7 +16,7 @@ from app.trading.market_data import (
 from app.trading.rules import build_signal
 
 
-async def run_scan(settings: Settings) -> ScanResult:
+async def run_scan(settings: Settings, sentiment: bool = False) -> ScanResult:
     store = SignalStore(settings)
     signals: list[Signal] = []
 
@@ -77,19 +77,28 @@ async def run_scan(settings: Settings) -> ScanResult:
     if settings.lunarcrush_api_key:
         from app.data.lunarcrush import fetch_batch_sentiment, is_rate_limited, daily_call_count
         from app.data.coingecko import fetch_macro_context
+        from app.data.sentiment_cache import SentimentStore
         crypto_symbols = [s.symbol for s in signals if "/" in s.symbol]
         if crypto_symbols:
-            sentiment_map, macro = await asyncio.gather(
-                fetch_batch_sentiment(crypto_symbols, settings.lunarcrush_api_key),
-                fetch_macro_context(),
-            )
-            if is_rate_limited():
-                await send_system_alert(
-                    "⚠️ LunarCrush daily API limit hit\n"
-                    f"Used {daily_call_count()} calls today (free tier: 25/day).\n"
-                    "Sentiment enrichment skipped for remaining symbols. Resets tomorrow.",
-                    settings,
-                )
+            scache = SentimentStore(settings)
+            macro = await fetch_macro_context()
+
+            if sentiment:
+                # Fresh fetch from API, write to Supabase cache
+                sentiment_map = await fetch_batch_sentiment(crypto_symbols, settings.lunarcrush_api_key)
+                if sentiment_map:
+                    scache.set_batch(sentiment_map)
+                if is_rate_limited():
+                    await send_system_alert(
+                        "⚠️ LunarCrush daily API limit hit\n"
+                        f"Used {daily_call_count()} calls today (free tier: 25/day).\n"
+                        "Sentiment enrichment skipped. Resets tomorrow.",
+                        settings,
+                    )
+            else:
+                # Read from Supabase cache only — no API calls
+                sentiment_map = scache.get_batch(crypto_symbols)
+
             for signal in signals:
                 enrichment = {}
                 if signal.symbol in sentiment_map:

@@ -134,3 +134,13 @@ create table if not exists public.analysis_cache (
 
 create index if not exists analysis_cache_lookup_idx
   on public.analysis_cache (symbol, timeframe, date);
+
+-- Sentiment cache (LunarCrush data, refreshed once daily + on manual scan)
+create table if not exists public.sentiment_cache (
+  symbol        text primary key,
+  galaxy_score  real,
+  alt_rank      integer,
+  sentiment     real,
+  social_volume integer,
+  fetched_at    timestamptz not null default now()
+);

@@ -14,6 +14,7 @@ from app.storage import SignalStore
 async def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--summarize", action="store_true", help="Force re-summarize latest signals with Gemini IDS-style prompt")
+    parser.add_argument("--sentiment", action="store_true", help="Fetch fresh LunarCrush sentiment (daily run + manual only)")
     args = parser.parse_args()
 
     settings = get_settings()
@@ -50,8 +51,11 @@ async def main() -> None:
         print("Done.")
         return
 
-    # Normal scan
-    result = await run_scan(settings)
+    # Normal scan — sentiment=True on daily morning run or explicit --sentiment flag
+    from datetime import datetime, timezone
+    utc_hour = datetime.now(timezone.utc).hour
+    _is_morning = utc_hour == 0
+    result = await run_scan(settings, sentiment=args.sentiment or _is_morning)
     print(f"scanned={result.scanned} changed={result.changed}")
     for signal in result.signals:
         print(f"  {signal.symbol} {signal.action} {signal.trend} conf={signal.confidence}")
@@ -64,8 +68,6 @@ async def main() -> None:
         print("daily_summary skipped (GEMINI_API_KEY not set or error)")
 
     # Morning run at 00:00 UTC = 07:00 Bangkok
-    from datetime import datetime, timezone
-    utc_hour = datetime.now(timezone.utc).hour
     force_digest = os.environ.get("FORCE_DIGEST", "") == "1"
     if utc_hour == 0 or force_digest:
         # Step 1: Force-regenerate all signal summaries with AI

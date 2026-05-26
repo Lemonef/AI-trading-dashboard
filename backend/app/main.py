@@ -30,7 +30,7 @@ def list_signals() -> list[Signal]:
 
 @app.post("/api/scan", response_model=ScanResult)
 async def scan_now() -> ScanResult:
-    return await run_scan(get_settings())
+    return await run_scan(get_settings(), sentiment=True)
 
 
 @app.post("/api/discover")
