@@ -1,0 +1,30 @@
+name: Market Discovery
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e backend/
+
+      - name: Run discovery
+        env:
+          WATCHLIST: ${{ secrets.WATCHLIST }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          EXCHANGE_ID: ${{ secrets.EXCHANGE_ID }}
+          TIMEFRAME: ${{ secrets.TIMEFRAME }}
+        run: python -m app.discovery.cli
+        working-directory: backend
