@@ -11,11 +11,10 @@ export default function DiscoverButton() {
     setRunning(true);
     const id = toast.loading("Scoring markets…", { duration: Infinity });
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-      const res = await fetch(`${apiUrl}/api/discover`, { method: "POST" });
+      const res = await fetch("/api/discover", { method: "POST" });
       if (!res.ok) throw new Error(`${res.status}`);
       toast.dismiss(id);
-      toast.success("Discovery complete! market_scores updated.");
+      toast.success("Discovery triggered! Results ready in ~30s.");
     } catch {
       toast.dismiss(id);
       toast.error("Discovery failed. Is the backend running?");
