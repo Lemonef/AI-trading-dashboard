@@ -60,13 +60,25 @@ async def _groq_signal_summary(signal: Signal, settings: Settings) -> tuple[str,
     if fear_greed is not None:
         macro_line = f"Macro: Fear/Greed {fear_greed} ({fear_greed_label}), BTC dom {btc_dom}%. "
 
+    skill_context = _load_skills(settings)
+
     prompt = (
-        "You are a trading analyst using the Investor Decision Stack (IDS) framework.\n\n"
-        f"Write exactly 3 sentences for {signal.symbol}:\n"
-        f"1. REGIME: trend={signal.trend}, EMA50 {'above' if ema50 > ema200 else 'below'} EMA200, ADX {round(adx)} ({'strong' if adx >= 25 else 'weak'}), RSI {round(rsi)}. {macro_line}\n"
-        f"2. SETUP: signal={signal.action.replace('_', ' ')}, confidence={round(signal.confidence * 100)}%, volume {round(vol, 1)}x. {sentiment_line}Key conditions met or missing.\n"
-        f"3. VERDICT: TP={signal.tp}, SL={signal.sl}. End with 'Not financial advice — user must confirm.'\n\n"
-        "Under 100 words. Specific numbers. English only."
+        f"{skill_context}\n\n"
+        "---\n\n"
+        "You are a trading analyst. Using the IDS framework and Investor DNA above, "
+        f"write a focused signal brief for {signal.symbol} tailored to DNA: {settings.investor_dna}.\n\n"
+        f"DATA:\n"
+        f"- Trend: {signal.trend} | Action: {signal.action.replace('_', ' ')} | Confidence: {round(signal.confidence * 100)}%\n"
+        f"- EMA50 {'above' if ema50 > ema200 else 'below'} EMA200 | ADX {round(adx)} ({'strong' if adx >= 25 else 'weak'}) | RSI {round(rsi)} | Vol {round(vol, 1)}x\n"
+        f"- TP: {signal.tp} | SL: {signal.sl}\n"
+        + (f"- {macro_line}\n" if macro_line else "")
+        + (f"- {sentiment_line}\n" if sentiment_line else "")
+        + f"\nReasons: {'; '.join(signal.reasons[:3])}\n\n"
+        "Write exactly 3 sentences:\n"
+        "1. REGIME (IDS Layer 1+2): trend context + ADX/RSI read\n"
+        "2. SETUP (IDS Layer 3): what triggered, what's missing, sentiment if available\n"
+        "3. VERDICT: TP/SL levels + one action note for this DNA profile. End: 'Not financial advice — user must confirm.'\n\n"
+        "Under 120 words. Specific numbers. English only."
     )
 
     try:
@@ -78,7 +90,7 @@ async def _groq_signal_summary(signal: Signal, settings: Settings) -> tuple[str,
                 json={
                     "model": "llama-3.1-8b-instant",
                     "messages": [{"role": "user", "content": prompt}],
-                    "max_tokens": 200,
+                    "max_tokens": 300,
                     "temperature": 0.4,
                 },
             )
