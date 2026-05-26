@@ -9,15 +9,16 @@ export default function DiscoverButton() {
 
   async function discover() {
     setRunning(true);
-    const id = toast.loading("Running discovery scan…", { duration: Infinity });
+    const id = toast.loading("Scoring markets…", { duration: Infinity });
     try {
-      const res = await fetch("/api/discover", { method: "POST" });
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+      const res = await fetch(`${apiUrl}/api/discover`, { method: "POST" });
       if (!res.ok) throw new Error(`${res.status}`);
       toast.dismiss(id);
-      toast.success("Discovery triggered! market_scores will update in ~2min.");
+      toast.success("Discovery complete! market_scores updated.");
     } catch {
       toast.dismiss(id);
-      toast.error("Discovery failed. Check GITHUB_TOKEN in Vercel env vars.");
+      toast.error("Discovery failed. Is the backend running?");
     } finally {
       setRunning(false);
     }
@@ -30,7 +31,7 @@ export default function DiscoverButton() {
       className="btn-press flex items-center gap-2 border border-line bg-white px-4 py-2 text-sm font-semibold text-ink shadow-sm transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
     >
       <Zap size={13} className={running ? "animate-pulse" : ""} />
-      {running ? "Running…" : "Discover"}
+      {running ? "Scoring…" : "Discover"}
     </button>
   );
 }
