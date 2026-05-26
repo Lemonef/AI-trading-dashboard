@@ -42,13 +42,31 @@ async def _groq_signal_summary(signal: Signal, settings: Settings) -> tuple[str,
     rsi = ind.get("rsi") or 50
     vol = ind.get("volume_ratio") or 0
 
+    enrichment = signal.enrichment if hasattr(signal, "enrichment") else {}
+    galaxy = enrichment.get("galaxy_score")
+    alt_rank = enrichment.get("alt_rank")
+    sentiment_pct = enrichment.get("sentiment")
+    fear_greed = enrichment.get("fear_greed_value")
+    fear_greed_label = enrichment.get("fear_greed_label", "")
+    btc_dom = enrichment.get("btc_dominance")
+
+    sentiment_line = ""
+    if galaxy is not None:
+        sentiment_line = (
+            f"Social: Galaxy Score {galaxy}/100, Alt Rank #{alt_rank}, "
+            f"Sentiment {sentiment_pct}% bullish. "
+        )
+    macro_line = ""
+    if fear_greed is not None:
+        macro_line = f"Macro: Fear/Greed {fear_greed} ({fear_greed_label}), BTC dom {btc_dom}%. "
+
     prompt = (
         "You are a trading analyst using the Investor Decision Stack (IDS) framework.\n\n"
         f"Write exactly 3 sentences for {signal.symbol}:\n"
-        f"1. REGIME: trend={signal.trend}, EMA50 {'above' if ema50 > ema200 else 'below'} EMA200, ADX {round(adx)} ({'strong' if adx >= 25 else 'weak'}), RSI {round(rsi)}.\n"
-        f"2. SETUP: signal={signal.action.replace('_', ' ')}, confidence={round(signal.confidence * 100)}%, volume {round(vol, 1)}x. Key conditions met or missing.\n"
+        f"1. REGIME: trend={signal.trend}, EMA50 {'above' if ema50 > ema200 else 'below'} EMA200, ADX {round(adx)} ({'strong' if adx >= 25 else 'weak'}), RSI {round(rsi)}. {macro_line}\n"
+        f"2. SETUP: signal={signal.action.replace('_', ' ')}, confidence={round(signal.confidence * 100)}%, volume {round(vol, 1)}x. {sentiment_line}Key conditions met or missing.\n"
         f"3. VERDICT: TP={signal.tp}, SL={signal.sl}. End with 'Not financial advice — user must confirm.'\n\n"
-        "Under 90 words. Specific numbers. English only."
+        "Under 100 words. Specific numbers. English only."
     )
 
     try:
