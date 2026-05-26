@@ -7,42 +7,66 @@ interface Props {
   defaultInterval?: string;
 }
 
-const INTERVALS = ["1D", "4H", "1H", "1W"] as const;
+const INTERVALS: { label: string; tv: string }[] = [
+  { label: "1H", tv: "60" },
+  { label: "4H", tv: "240" },
+  { label: "1D", tv: "D" },
+  { label: "1W", tv: "W" },
+];
+
+let scriptLoaded = false;
+let scriptLoading = false;
+const callbacks: (() => void)[] = [];
+
+function loadTvScript(cb: () => void) {
+  if (scriptLoaded) { cb(); return; }
+  callbacks.push(cb);
+  if (scriptLoading) return;
+  scriptLoading = true;
+  const s = document.createElement("script");
+  s.src = "https://s3.tradingview.com/tv.js";
+  s.onload = () => {
+    scriptLoaded = true;
+    callbacks.forEach((fn) => fn());
+    callbacks.length = 0;
+  };
+  document.head.appendChild(s);
+}
 
 export default function TradingViewWidget({ symbol, defaultInterval = "1D" }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [interval, setInterval] = useState(defaultInterval);
+  const [interval, setInterval] = useState(
+    INTERVALS.find((i) => i.label === defaultInterval)?.tv ?? "D"
+  );
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    if (!containerRef.current || collapsed) return;
+    if (collapsed || !containerRef.current) return;
+
     containerRef.current.innerHTML = "";
+    const id = `tv_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    containerRef.current.id = id;
 
-    const wrapper = document.createElement("div");
-    wrapper.className = "tradingview-widget-container__widget";
-    wrapper.style.height = "100%";
-    wrapper.style.width = "100%";
-    containerRef.current.appendChild(wrapper);
-
-    const script = document.createElement("script");
-    script.src =
-      "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
-    script.type = "text/javascript";
-    script.async = true;
-    script.innerHTML = JSON.stringify({
-      autosize: true,
-      symbol,
-      interval,
-      timezone: "Asia/Bangkok",
-      theme: "light",
-      style: "1",
-      locale: "en",
-      hide_top_toolbar: false,
-      hide_legend: false,
-      save_image: false,
-      calendar: false,
+    loadTvScript(() => {
+      if (!containerRef.current) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      new (window as any).TradingView.widget({
+        container_id: id,
+        symbol,
+        interval,
+        timezone: "Asia/Bangkok",
+        theme: "light",
+        style: "1",
+        locale: "en",
+        autosize: true,
+        hide_top_toolbar: false,
+        hide_side_toolbar: false,
+        allow_symbol_change: false,
+        save_image: false,
+        withdateranges: true,
+        height: 380,
+      });
     });
-    containerRef.current.appendChild(script);
 
     return () => {
       if (containerRef.current) containerRef.current.innerHTML = "";
@@ -55,15 +79,15 @@ export default function TradingViewWidget({ symbol, defaultInterval = "1D" }: Pr
         <div className="flex gap-1">
           {INTERVALS.map((iv) => (
             <button
-              key={iv}
-              onClick={() => setInterval(iv)}
+              key={iv.label}
+              onClick={() => setInterval(iv.tv)}
               className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ${
-                interval === iv
+                interval === iv.tv
                   ? "bg-white/10 text-white"
                   : "text-[#787b86] hover:text-white"
               }`}
             >
-              {iv}
+              {iv.label}
             </button>
           ))}
         </div>
@@ -76,7 +100,7 @@ export default function TradingViewWidget({ symbol, defaultInterval = "1D" }: Pr
       </div>
 
       {!collapsed && (
-        <div ref={containerRef} className="tradingview-widget-container" style={{ height: 380, width: "100%" }} />
+        <div ref={containerRef} style={{ height: 380, width: "100%" }} />
       )}
     </div>
   );
