@@ -30,6 +30,8 @@ def build_signal(symbol: str, exchange: str, timeframe: str, enriched: pd.DataFr
         sl=sl,
         changed=changed,
         trend_changed=trend_changed,
+        previous_action=previous_action if changed else None,
+        previous_trend=previous_trend if trend_changed else None,
         indicators={
             "ema50": _num(latest.get("ema50")),
             "ema200": _num(latest.get("ema200")),

@@ -69,9 +69,13 @@ async def send_alert_batch(signals: list[Signal], settings: Settings) -> None:
         # Individual signals
         for signal in signals:
             action_emoji = {"long_setup": "🟢", "short_setup": "🔴", "watch": "🟡", "no_trade": "⚫"}.get(signal.action, "")
-            flag = "📈 TREND FLIP · " if signal.trend_changed and not signal.changed else ""
+            trend_flag = "📈 TREND FLIP · " if signal.trend_changed else ""
+            delta = ""
+            if signal.changed and signal.previous_action:
+                delta = f"  {signal.previous_action.replace('_', ' ').upper()} → {signal.action.replace('_', ' ').upper()}\n"
             message = (
-                f"{flag}{action_emoji} {signal.symbol} · {signal.timeframe}: {signal.action.replace('_', ' ').upper()}\n"
+                f"{trend_flag}{action_emoji} {signal.symbol} · {signal.timeframe}: {signal.action.replace('_', ' ').upper()}\n"
+                f"{delta}"
                 f"Trend: {signal.trend} · Confidence: {round(signal.confidence * 100)}%\n"
                 f"Price: {_fmt(signal.close)}\n"
                 f"TP: {_fmt(signal.tp)} · SL: {_fmt(signal.sl)}\n"
@@ -88,8 +92,14 @@ async def send_daily_digest(signals: list[Signal], summary: str | None, settings
     if not settings.telegram_bot_token or not settings.telegram_chat_id:
         return
 
+    def _esc(text: str) -> str:
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
     from datetime import date as _date
-    lines = [f"🌅 *Good morning — Daily Signal Digest*", f"_{_date.today().strftime('%d %b %Y')} · Thailand time_\n"]
+    lines = [
+        f"🌅 <b>Good morning — Daily Signal Digest</b>",
+        f"<i>{_date.today().strftime('%d %b %Y')} · Thailand time</i>\n",
+    ]
 
     # Watchlist signals first
     if watchlist:
@@ -102,13 +112,13 @@ async def send_daily_digest(signals: list[Signal], summary: str | None, settings
             key=lambda x: x.confidence, reverse=True
         )
         if wl_active or wl_watch:
-            lines.append("👀 *Your Watchlist*")
+            lines.append("👀 <b>Your Watchlist</b>")
             for s in (wl_active + wl_watch)[:4]:
                 emoji = "🟢" if s.action == "long_setup" else "🔴" if s.action == "short_setup" else "🟡"
                 tp_sl = f"TP {_fmt(s.tp)} · SL {_fmt(s.sl)}" if s.tp else "No levels"
-                lines.append(f"{emoji} *{s.symbol}* · {s.action.replace('_', ' ')} · {round(s.confidence * 100)}%\n   {tp_sl}")
+                lines.append(f"{emoji} <b>{_esc(s.symbol)}</b> · {s.action.replace('_', ' ')} · {round(s.confidence * 100)}%\n   {tp_sl}")
         else:
-            lines.append("👀 *Your Watchlist*\nNo active signals on watchlist today.")
+            lines.append("👀 <b>Your Watchlist</b>\nNo active signals on watchlist today.")
 
     # Top 2-3 overall active setups (outside watchlist)
     all_active = sorted(
@@ -116,21 +126,23 @@ async def send_daily_digest(signals: list[Signal], summary: str | None, settings
         key=lambda x: x.confidence, reverse=True
     )[:3]
     if all_active:
-        lines.append("\n🔥 *Top Market Setups*")
+        lines.append("\n🔥 <b>Top Market Setups</b>")
         for s in all_active:
             emoji = "🟢" if s.action == "long_setup" else "🔴"
-            lines.append(f"{emoji} *{s.symbol}* · {round(s.confidence * 100)}% · TP {_fmt(s.tp)} · SL {_fmt(s.sl)}")
+            lines.append(f"{emoji} <b>{_esc(s.symbol)}</b> · {round(s.confidence * 100)}% · TP {_fmt(s.tp)} · SL {_fmt(s.sl)}")
 
     if summary:
-        lines.append(f"\n🤖 *AI Brief*\n{summary[:400]}{'…' if len(summary) > 400 else ''}")
+        lines.append(f"\n🤖 <b>AI Brief</b>\n{_esc(summary[:400])}{'…' if len(summary) > 400 else ''}")
 
-    lines.append("\n⚠️ _Manual confirmation required before execution._")
+    lines.append("\n⚠️ <i>Manual confirmation required before execution.</i>")
 
     message = "\n".join(lines)
     url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage"
     async with httpx.AsyncClient(timeout=15) as client:
-        await client.post(url, json={
+        resp = await client.post(url, json={
             "chat_id": settings.telegram_chat_id,
             "text": message,
-            "parse_mode": "Markdown",
+            "parse_mode": "HTML",
         })
+        if not resp.is_success:
+            print(f"[daily_digest ERROR] {resp.status_code}: {resp.text[:200]}")

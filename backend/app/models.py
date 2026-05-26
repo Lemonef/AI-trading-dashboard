@@ -23,6 +23,8 @@ class Signal(BaseModel):
     sl: float | None = None
     changed: bool = False
     trend_changed: bool = False
+    previous_action: str | None = None
+    previous_trend: str | None = None
     ai_enhanced: bool = False
     indicators: dict[str, float | None] = Field(default_factory=dict)
     reasons: list[str] = Field(default_factory=list)
