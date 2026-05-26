@@ -34,6 +34,9 @@ async def main() -> None:
         print(f"supabase_enabled={store.supabase_enabled}")
         print(f"gemini_api_key={'SET' if settings.gemini_api_key else 'NOT SET — this is the problem'}")
         for signal in unique:
+            if signal.action not in ("long_setup", "short_setup") or signal.confidence < 0.67:
+                print(f"  {signal.symbol} — skipped (action={signal.action}, conf={signal.confidence})")
+                continue
             print(f"  {signal.symbol} id={signal.id}")
             new_summary, ai_enhanced = await force_summarize_signal(signal, settings)
             if signal.id:
@@ -76,6 +79,9 @@ async def main() -> None:
                 seen.add(key)
                 unique.append(s)
         for signal in unique:
+            if signal.action not in ("long_setup", "short_setup") or signal.confidence < 0.67:
+                print(f"  {signal.symbol} — skipped")
+                continue
             new_summary, ai_enhanced = await force_summarize_signal(signal, settings)
             if signal.id:
                 store.update_signal_summary(signal.id, new_summary, ai_enhanced)
