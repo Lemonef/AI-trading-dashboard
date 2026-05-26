@@ -2,41 +2,55 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-type DNA = "rockstar" | "sniper" | "watcher";
+import type { Signal } from "../../lib/types";
 
-interface MarketScore {
-  symbol: string;
-  asset_class: string;
-  score: number;
-  trend: string;
-  adx: number;
-  rsi: number;
-  volume_ratio: number;
-  trend_strength: number;
-}
+type DNA = "rockstar" | "sniper" | "watcher";
 
 function symbolToSlug(s: string): string {
   return s.replace(/\//g, "--").replace(/=/g, "__");
 }
 
-function fmt(v: number | null | undefined, d = 1): string {
+function fmt(v: number | null | undefined, d = 2): string {
   if (v == null || Number.isNaN(v)) return "—";
   return v.toLocaleString("en-US", { maximumFractionDigits: d });
 }
 
-function filterByDna(markets: MarketScore[], dna: DNA): MarketScore[] {
-  let filtered: MarketScore[];
+const INDICATOR_LABELS: Record<string, string> = {
+  ema50: "EMA 50", ema200: "EMA 200", macd: "MACD",
+  macd_signal: "MACD Sig", adx: "ADX", rsi: "RSI",
+  atr: "ATR", volume_ratio: "Vol ×",
+};
+
+function indicatorColor(key: string, value: number | null): string {
+  if (value == null) return "text-zinc-400";
+  if (key === "rsi") return value > 70 ? "text-sell font-bold" : value < 30 ? "text-buy font-bold" : "text-ink";
+  if (key === "adx") return value >= 30 ? "text-buy" : value >= 20 ? "text-wait" : "text-zinc-500";
+  if (key === "volume_ratio" && value >= 1.3) return "text-buy";
+  return "text-ink";
+}
+
+function filterByDna(signals: Signal[], dna: DNA): Signal[] {
+  let filtered: Signal[];
   if (dna === "rockstar") {
-    filtered = markets.filter((m) => m.trend !== "sideways" && m.adx >= 25);
-    filtered.sort((a, b) => b.adx - a.adx);
+    // Strong trend + ADX ≥ 20
+    filtered = signals.filter(
+      (s) => s.trend !== "sideways" && (s.indicators?.adx ?? 0) >= 20
+    );
+    filtered.sort((a, b) => (b.indicators?.adx ?? 0) - (a.indicators?.adx ?? 0));
   } else if (dna === "sniper") {
-    filtered = markets.filter((m) => m.volume_ratio >= 1.3);
-    filtered.sort((a, b) => b.volume_ratio - a.volume_ratio);
+    // Active setups (long or short) sorted by confidence
+    filtered = signals.filter(
+      (s) => s.action === "long_setup" || s.action === "short_setup"
+    );
+    filtered.sort((a, b) => b.confidence - a.confidence);
   } else {
-    filtered = markets.filter((m) => m.trend === "bullish" && m.rsi < 40);
-    filtered.sort((a, b) => b.score - a.score);
+    // Watcher: watch signals + bullish trend, sorted by confidence
+    filtered = signals.filter(
+      (s) => s.action === "watch" && s.trend === "bullish"
+    );
+    filtered.sort((a, b) => b.confidence - a.confidence);
   }
-  return filtered.slice(0, 3);
+  return filtered.slice(0, 5);
 }
 
 function dnaLabel(dna: DNA) {
@@ -46,19 +60,23 @@ function dnaLabel(dna: DNA) {
 }
 
 function dnaSubtitle(dna: DNA) {
-  if (dna === "rockstar") return "Strong trend · ADX ≥ 25";
-  if (dna === "sniper") return "High volume · Vol ≥ 1.3×";
-  return "Bullish + RSI oversold < 40";
+  if (dna === "rockstar") return "Strong trend · ADX ≥ 20";
+  if (dna === "sniper") return "Active setups by confidence";
+  return "Watching bullish setups";
 }
 
-function chipColor(value: number, low: number, high: number) {
-  if (value >= high) return "bg-green-100 text-green-700";
-  if (value >= low) return "bg-zinc-100 text-zinc-600";
-  return "bg-zinc-50 text-zinc-400";
+function actionBadgeClass(action: Signal["action"]) {
+  if (action === "long_setup") return "border-buy text-buy";
+  if (action === "short_setup") return "border-sell text-sell";
+  if (action === "watch") return "border-wait text-wait";
+  return "border-zinc-300 text-zinc-400";
 }
 
-export default function TopMarketsPanel() {
-  const [markets, setMarkets] = useState<MarketScore[]>([]);
+interface Props {
+  signals: Signal[];
+}
+
+export default function TopMarketsPanel({ signals }: Props) {
   const [dna, setDna] = useState<DNA>("rockstar");
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -74,13 +92,6 @@ export default function TopMarketsPanel() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  useEffect(() => {
-    fetch("/api/markets")
-      .then((r) => r.json())
-      .then(setMarkets)
-      .catch(() => {});
-  }, []);
-
   function selectDna(d: DNA) {
     setDna(d);
     setExpanded(null);
@@ -88,10 +99,11 @@ export default function TopMarketsPanel() {
     window.dispatchEvent(new Event("storage"));
   }
 
-  const top = filterByDna(markets, dna);
+  const top = filterByDna(signals, dna);
 
   return (
     <section className="card-lift border border-line bg-white">
+      {/* DNA chips */}
       <div className="flex gap-1.5 flex-wrap border-b border-line px-4 py-3">
         {(["rockstar", "sniper", "watcher"] as DNA[]).map((d) => (
           <button
@@ -108,6 +120,7 @@ export default function TopMarketsPanel() {
         ))}
       </div>
 
+      {/* Header */}
       <div className="px-4 pt-3 pb-1">
         <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
           Top for {dnaLabel(dna)}
@@ -117,73 +130,63 @@ export default function TopMarketsPanel() {
 
       {top.length === 0 ? (
         <div className="px-4 py-4 text-xs text-zinc-400">
-          No markets match — run discovery scan first.
+          No signals match this filter.
         </div>
       ) : (
         <ul>
-          {top.map((m) => {
-            const isExpanded = expanded === m.symbol;
+          {top.map((s) => {
+            const isExpanded = expanded === s.symbol;
+            const indicators = s.indicators ?? {};
             return (
-              <li key={m.symbol} className="border-t border-line">
+              <li key={s.symbol} className="border-t border-line">
+                {/* Row */}
                 <div
                   className="flex cursor-pointer items-start justify-between px-4 py-3 hover:bg-[#FAFAF7] transition-colors"
-                  onClick={() => setExpanded(isExpanded ? null : m.symbol)}
+                  onClick={() => setExpanded(isExpanded ? null : s.symbol)}
                 >
-                  <div>
-                    <div className="font-semibold text-sm text-ink leading-tight">
-                      {m.symbol}
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm text-ink leading-tight truncate">
+                      {s.symbol}
                     </div>
-                    <div className="flex gap-1.5 mt-1.5 flex-wrap">
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${chipColor(m.adx, 20, 30)}`}>
-                        ADX {fmt(m.adx)}
-                      </span>
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${chipColor(100 - m.rsi, 30, 65)}`}>
-                        RSI {fmt(m.rsi)}
-                      </span>
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${chipColor(m.volume_ratio, 1.1, 1.3)}`}>
-                        Vol {fmt(m.volume_ratio)}×
-                      </span>
+                    <div className="text-[10px] text-zinc-400 mt-0.5">
+                      {Math.round(s.confidence * 100)}% confidence
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1 ml-2 shrink-0">
-                    <span
-                      className={`border px-1.5 py-0.5 text-[10px] font-semibold ${
-                        m.trend === "bullish"
-                          ? "border-buy text-buy"
-                          : m.trend === "bearish"
-                          ? "border-sell text-sell"
-                          : "border-zinc-300 text-zinc-400"
-                      }`}
-                    >
-                      {m.trend}
+                    <span className={`border px-1.5 py-0.5 text-[10px] font-semibold ${actionBadgeClass(s.action)}`}>
+                      {s.action.replace("_", " ")}
                     </span>
-                    <span className="text-[10px] text-zinc-400">
-                      {Math.round(m.score * 100)}%
+                    <span className={`text-[10px] font-medium ${
+                      s.trend === "bullish" ? "text-buy" : s.trend === "bearish" ? "text-sell" : "text-zinc-400"
+                    }`}>
+                      {s.trend} {isExpanded ? "▲" : "▼"}
                     </span>
                   </div>
                 </div>
 
+                {/* Expanded indicator panel */}
                 {isExpanded && (
                   <div className="border-t border-line bg-[#F7F6F0] px-4 py-3">
-                    <dl className="grid grid-cols-3 gap-2">
-                      {[
-                        { label: "ADX", value: fmt(m.adx) },
-                        { label: "RSI", value: fmt(m.rsi) },
-                        { label: "Vol ×", value: fmt(m.volume_ratio) },
-                        { label: "Score", value: `${Math.round(m.score * 100)}%` },
-                        { label: "Trend", value: m.trend },
-                        { label: "Class", value: m.asset_class },
-                      ].map(({ label, value }) => (
-                        <div key={label} className="border border-line bg-white px-2 py-1.5">
-                          <dt className="text-[9px] font-semibold uppercase tracking-wide text-zinc-400">
-                            {label}
+                    <dl className="grid grid-cols-2 gap-2">
+                      {Object.entries(indicators).map(([key, value]) => (
+                        <div key={key} className="border border-line bg-white px-3 py-2">
+                          <dt className="text-[10px] font-medium uppercase tracking-wide text-zinc-400">
+                            {INDICATOR_LABELS[key] ?? key}
                           </dt>
-                          <dd className="mt-0.5 text-xs font-semibold text-ink">{value}</dd>
+                          <dd className={`mt-0.5 text-sm tabular-nums ${indicatorColor(key, value)}`}>
+                            {fmt(value, key === "volume_ratio" ? 2 : key === "rsi" || key === "adx" ? 1 : 2)}
+                          </dd>
                         </div>
                       ))}
                     </dl>
+                    {s.tp != null && (
+                      <div className="mt-2 flex gap-3 text-[11px]">
+                        <span className="text-buy font-semibold">TP {fmt(s.tp)}</span>
+                        <span className="text-sell font-semibold">SL {fmt(s.sl)}</span>
+                      </div>
+                    )}
                     <Link
-                      href={`/signals/${symbolToSlug(m.symbol)}`}
+                      href={`/signals/${symbolToSlug(s.symbol)}`}
                       className="mt-2.5 flex items-center text-[11px] font-semibold text-zinc-500 hover:text-ink"
                       onClick={(e) => e.stopPropagation()}
                     >

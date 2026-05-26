@@ -113,7 +113,7 @@ export default async function Home() {
         {/* Sidebar */}
         <aside className="space-y-4 stagger">
 
-          <TopMarketsPanel />
+          <TopMarketsPanel signals={signals} />
 
           {top && Object.keys(top.indicators ?? {}).length > 0 && (
             <section className="border border-line bg-white p-4">
