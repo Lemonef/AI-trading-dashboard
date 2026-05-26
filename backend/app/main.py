@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.analysis_cache import AnalysisCache
@@ -29,8 +29,8 @@ def list_signals() -> list[Signal]:
 
 
 @app.post("/api/scan", response_model=ScanResult)
-async def scan_now(manual: bool = Query(False)) -> ScanResult:
-    return await run_scan(get_settings(), manual=manual)
+async def scan_now() -> ScanResult:
+    return await run_scan(get_settings())
 
 
 @app.post("/api/discover")
