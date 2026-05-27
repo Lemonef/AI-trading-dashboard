@@ -34,14 +34,36 @@ async def main() -> None:
         print(f"Found {len(unique)} unique signals")
         print(f"supabase_enabled={store.supabase_enabled}")
         print(f"gemini_api_key={'SET' if settings.gemini_api_key else 'NOT SET — this is the problem'}")
+
+        # Load cached LunarCrush sentiment + macro so AI summaries are enriched
+        sentiment_map: dict[str, dict] = {}
+        macro: dict = {}
+        if settings.lunarcrush_api_key:
+            from app.data.sentiment_cache import SentimentStore
+            from app.data.coingecko import fetch_macro_context
+            crypto_symbols = [s.symbol for s in unique if "/" in s.symbol]
+            if crypto_symbols:
+                sentiment_map = SentimentStore(settings).get_batch(crypto_symbols)
+                print(f"  sentiment cache: {len(sentiment_map)}/{len(crypto_symbols)} symbols")
+            macro = await fetch_macro_context()
+
         for signal in unique:
+            # Attach cached sentiment before AI call — enrichment is stripped from Supabase
+            enrichment: dict = {}
+            if signal.symbol in sentiment_map:
+                enrichment.update(sentiment_map[signal.symbol])
+            if macro:
+                enrichment.update(macro)
+            if enrichment:
+                signal.enrichment = enrichment
+
             print(f"  {signal.symbol} id={signal.id}")
             new_summary, ai_enhanced = await force_summarize_signal(signal, settings)
             if signal.id:
                 store.update_signal_summary(signal.id, new_summary, ai_enhanced)
             else:
                 print(f"    ⚠ no id — skipping update")
-            label = "✦ Gemini" if ai_enhanced else "⚠ fallback (check GEMINI_API_KEY)"
+            label = "✦ AI" if ai_enhanced else "⚠ fallback (check GEMINI_API_KEY)"
             print(f"    → {label}")
         # Stamp updated_at so dashboard shows correct "Last AI summary" time
         store.stamp_summarize_time(date.today().isoformat())
