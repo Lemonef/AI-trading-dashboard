@@ -6,6 +6,24 @@ For tasks touching trading logic, signals, entries, or risk — read relevant fi
 
 AI-assisted trading dashboard. Scanner runs rules-based analysis, stores signals to Supabase, sends Telegram alerts. Dashboard reads signals and displays them. **No auto-execution.** User must confirm any trade.
 
+## Automation Schedule (GitHub Actions)
+
+| Time (BKK) | Workflow | What runs |
+|---|---|---|
+| Every 30 min | `scanner.yml` | Fetch market data (yfinance/CCXT), build signals, save to Supabase, Telegram alert on change |
+| Every 30 min (after scanner) | `discovery.yml` | Market Discovery on fresh signal data (`workflow_run` trigger) |
+| 07:00 daily | `scanner.yml` (0 0 UTC) | Same scan + LunarCrush sentiment fetch + Telegram morning digest (`FORCE_DIGEST=1`) |
+| 10:00 daily | `summarize.yml` (0 3 UTC) | AI per-signal summaries (Groq/Gemini) with cached LunarCrush sentiment + macro |
+
+**Notes:**
+- `FORCE_DIGEST=1` set via `github.event.schedule` expression — digest fires reliably even when GH Actions delays job start past 01:00 UTC
+- LunarCrush data fetched once/day (morning scan), cached in Supabase `sentiment_cache` table (25h TTL)
+- Summarize reads that cache at 10:00 BKK → AI gets galaxy score, alt rank, sentiment%, fear/greed, BTC dominance
+- `enrichment` field is NOT stored in Supabase signals table (intentional) — rehydrated from cache at summarize time
+- Groq free tier: 6,000 TPM on llama-3.1-8b-instant → `_RATE_LIMIT_SLEEP = 26s` per signal → 72 signals ≈ 31 min
+- Circuit breakers: `_groq_exhausted` + `_gemini_exhausted` in `ai.py` — skip remaining calls when daily quota hit
+- Scan completion Telegram message removed — only fires on signal change/trend change or price alert hit
+
 ## Stack
 
 | Layer | Tech |
@@ -13,9 +31,10 @@ AI-assisted trading dashboard. Scanner runs rules-based analysis, stores signals
 | Frontend | Next.js 16 + Tailwind 3, deployed statically |
 | Backend | FastAPI (Python 3.12), `uvicorn` |
 | Database | Supabase Postgres (`signals` table) |
-| Market data | CCXT → Binance/Coinbase/Kraken, demo fallback |
-| AI (signal) | Gemini 1.5 Flash — runs only on `changed` signals |
-| AI (daily) | Claude (configurable model) — once/day strategy summary |
+| Market data | CCXT → Binance/Coinbase/Kraken + yfinance (non-crypto), demo fallback |
+| AI (signal) | Groq llama-3.1-8b-instant (primary) → Gemini 2.0 Flash (fallback) |
+| AI (daily) | Groq llama-3.1-8b-instant — §11 IDS Daily Report |
+| Sentiment | LunarCrush (crypto) + CoinGecko fear/greed macro |
 | Alerts | Telegram bot |
 | Scheduler | GitHub Actions cron |
 
@@ -57,20 +76,38 @@ skills/
 ## Data Flow
 
 ```
-GitHub Actions cron
-  → POST /api/scan (or python -m app.cli)
-    → fetch OHLCV via CCXT (Binance → Coinbase → Kraken → demo)
-    → enrich_indicators() — pandas DataFrame
+scanner.yml (every 30 min)
+  → python -m app.cli
+    → fetch OHLCV: CCXT crypto / yfinance batch non-crypto
+    → enrich_indicators() — EMA50/200, RSI, MACD, ATR, ADX, volume
     → build_signal() — trend + action + TP/SL + confidence + reasons
-    → summarize_signal() — Gemini Flash (only if signal.changed)
-    → SignalStore.save_signal() — Supabase (or local data/)
-    → send_telegram_alert() — only if changed
+    → apply_sentiment_boost() — if LunarCrush cache available
+    → summarize_signal() — template only (no AI on regular scans)
+    → SignalStore.save_signal() — Supabase
+    → send_alert_batch() — only if signal.changed or trend_changed
+  [morning run only, 0 0 UTC]
+    → fetch fresh LunarCrush sentiment → SentimentStore.set_batch()
+    → fetch CoinGecko macro (fear/greed, BTC dominance)
+    → daily_strategy_summary() — Groq §11 IDS report
+    → send_daily_digest() — Telegram morning briefing
+
+discovery.yml (after each scanner run, workflow_run trigger)
+  → python -m app.discovery.cli
+    → Market Discovery on fresh signal data
+
+summarize.yml (daily 0 3 UTC = 10:00 BKK)
+  → python -m app.cli --summarize
+    → load signals from Supabase
+    → rehydrate enrichment from sentiment_cache (galaxy, alt_rank, sentiment%)
+    → rehydrate macro from CoinGecko (fear/greed, BTC dominance)
+    → force_summarize_signal() each — Groq (26s sleep) → Gemini fallback
+    → update Supabase with AI summary text
 
 Frontend (Next.js SSR)
   → getSignals() in lib/api.ts
     → Supabase REST API first
     → fallback: GET /api/signals from backend
-    → fallback: single hardcoded demo signal
+    → fallback: hardcoded demo signal
   → renders page.tsx with all signals
 ```
 
