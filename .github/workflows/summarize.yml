@@ -1,6 +1,8 @@
 name: Regenerate Summaries
 
 on:
+  schedule:
+    - cron: "0 3 * * *"   # 10:00 BKK — runs after morning scanner+digest finishes
   workflow_dispatch:
 
 permissions:
