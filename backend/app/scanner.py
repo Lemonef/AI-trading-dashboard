@@ -1,5 +1,3 @@
-import asyncio
-
 from app.ai import summarize_signal
 from app.alerts import _fmt, register_bot_commands, send_alert_batch, send_price_alert_hit, send_system_alert
 from app.config import Settings
@@ -151,17 +149,6 @@ async def run_scan(settings: Settings, sentiment: bool = False) -> ScanResult:
             store.trigger_price_alert(alert["id"])
 
     changed_count = sum(1 for signal in signals if signal.changed or signal.trend_changed)
-    active_setups = [s for s in signals if s.action in ("long_setup", "short_setup")]
-    active_setups.sort(key=lambda s: s.confidence, reverse=True)
-
-    lines = [
-        f"✅ Scan complete — {len(signals)} markets, {changed_count} changed",
-        f"🎯 Active setups: {len(active_setups)}",
-    ]
-    for s in active_setups[:3]:
-        emoji = "🟢" if s.action == "long_setup" else "🔴"
-        lines.append(f"  {emoji} {s.symbol} · {round(s.confidence * 100)}% · TP {_fmt(s.tp)} SL {_fmt(s.sl)}")
-    await send_system_alert("\n".join(lines), settings)
 
     return ScanResult(
         scanned=len(signals),
