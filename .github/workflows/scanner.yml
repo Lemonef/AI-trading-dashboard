@@ -63,4 +63,8 @@ jobs:
 
       - name: Run scanner
         working-directory: backend
+        env:
+          # Fire morning digest when triggered by the 0 0 * * * schedule,
+          # regardless of actual job start time (GH Actions cron can delay 30-60 min)
+          FORCE_DIGEST: ${{ github.event.schedule == '0 0 * * *' && '1' || '0' }}
         run: python -m app.cli

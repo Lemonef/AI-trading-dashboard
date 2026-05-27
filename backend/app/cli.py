@@ -51,7 +51,8 @@ async def main() -> None:
     # Normal scan — sentiment=True on daily morning run or explicit --sentiment flag
     from datetime import datetime, timezone
     utc_hour = datetime.now(timezone.utc).hour
-    _is_morning = utc_hour == 0
+    force_digest = os.environ.get("FORCE_DIGEST", "") == "1"
+    _is_morning = force_digest or utc_hour == 0
     result = await run_scan(settings, sentiment=args.sentiment or _is_morning)
     print(f"scanned={result.scanned} changed={result.changed}")
     for signal in result.signals:
@@ -64,9 +65,8 @@ async def main() -> None:
     else:
         print("daily_summary skipped (GEMINI_API_KEY not set or error)")
 
-    # Morning run at 00:00 UTC = 07:00 Bangkok
-    force_digest = os.environ.get("FORCE_DIGEST", "") == "1"
-    if utc_hour == 0 or force_digest:
+    # Morning run: triggered by 0 0 * * * schedule (FORCE_DIGEST=1) or hour==0 fallback
+    if _is_morning:
         # Step 1: Force-regenerate all signal summaries with AI
         print("Morning run — force-summarizing all signals with AI…")
         stored = store.list_signals(limit=100)
