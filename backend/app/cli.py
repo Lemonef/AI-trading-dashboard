@@ -66,30 +66,8 @@ async def main() -> None:
         print("daily_summary skipped (GEMINI_API_KEY not set or error)")
 
     # Morning run: triggered by 0 0 * * * schedule (FORCE_DIGEST=1) or hour==0 fallback
+    # Per-signal AI summaries are handled by Regenerate Summaries workflow at 03:00 UTC
     if _is_morning:
-        # Step 1: Force-regenerate all signal summaries with AI
-        print("Morning run — force-summarizing all signals with AI…")
-        stored = store.list_signals(limit=100)
-        seen: set[str] = set()
-        unique = []
-        for s in stored:
-            key = f"{s.symbol}:{s.timeframe}"
-            if key not in seen:
-                seen.add(key)
-                unique.append(s)
-        for signal in unique:
-            new_summary, ai_enhanced = await force_summarize_signal(signal, settings)
-            if signal.id:
-                store.update_signal_summary(signal.id, new_summary, ai_enhanced)
-            print(f"  {signal.symbol}: {'✦ AI' if ai_enhanced else '— template'}")
-
-        # Step 2: Regenerate daily strategy summary with fresh AI
-        summary = await daily_strategy_summary(result.signals, settings)
-        if summary:
-            store.save_daily_summary(date.today().isoformat(), summary, result.scanned)
-            print(f"daily_summary refreshed ({len(summary)} chars)")
-
-        # Step 3: Send morning digest to Telegram
         print("Sending morning digest to Telegram…")
         watchlist = store.list_watchlist()
         await send_daily_digest(result.signals, summary, settings, watchlist)

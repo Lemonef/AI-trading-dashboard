@@ -1,8 +1,10 @@
 name: Market Discovery
 
 on:
-  schedule:
-    - cron: "*/30 * * * *"
+  workflow_run:
+    workflows: ["Scheduled Scanner"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -21,10 +23,10 @@ jobs:
 
       - name: Run discovery
         env:
-          WATCHLIST: ${{ secrets.WATCHLIST }}
+          WATCHLIST: ${{ vars.WATCHLIST }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          EXCHANGE_ID: ${{ secrets.EXCHANGE_ID }}
-          TIMEFRAME: ${{ secrets.TIMEFRAME }}
+          EXCHANGE_ID: ${{ vars.EXCHANGE_ID || 'binance' }}
+          TIMEFRAME: ${{ vars.TIMEFRAME || '1d' }}
         run: python -m app.discovery.cli
         working-directory: backend
