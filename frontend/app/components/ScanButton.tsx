@@ -16,7 +16,7 @@ export default function ScanButton() {
       const res = await fetch("/api/scan", { method: "POST" });
       if (!res.ok) throw new Error(`${res.status}`);
       await new Promise((r) => setTimeout(r, 12_000));
-      await pollWorkflow("scanner.yml", since, 30_000, (elapsed) => {
+      await pollWorkflow("scanner.yml", since, 15_000, (elapsed) => {
         toast.loading(`Scanning… ${Math.round(elapsed / 60)}m`, { id: tid, duration: Infinity });
       });
       toast.success("Scan complete — reloading…", { id: tid, duration: 4000 });

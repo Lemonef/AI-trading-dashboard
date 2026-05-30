@@ -16,7 +16,7 @@ export default function SummarizeButton() {
       const res = await fetch("/api/summarize", { method: "POST" });
       if (!res.ok) throw new Error(`${res.status}`);
       await new Promise((r) => setTimeout(r, 12_000));
-      await pollWorkflow("summarize.yml", since, 20_000, (elapsed) => {
+      await pollWorkflow("summarize.yml", since, 30_000, (elapsed) => {
         toast.loading(`AI summaries… ${Math.round(elapsed / 60)}m`, { id: tid, duration: Infinity });
       });
       toast.success("Summaries done — reloading…", { id: tid, duration: 4000 });

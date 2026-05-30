@@ -16,7 +16,7 @@ export default function DiscoverButton() {
       const res = await fetch("/api/discover", { method: "POST" });
       if (!res.ok) throw new Error(`${res.status}`);
       await new Promise((r) => setTimeout(r, 12_000));
-      await pollWorkflow("discovery.yml", since, 15_000, (elapsed) => {
+      await pollWorkflow("discovery.yml", since, 10_000, (elapsed) => {
         toast.loading(`Discovery… ${Math.round(elapsed / 60)}m`, { id: tid, duration: Infinity });
       });
       toast.success("Discovery complete — reloading…", { id: tid, duration: 4000 });

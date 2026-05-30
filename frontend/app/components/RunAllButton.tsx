@@ -26,7 +26,7 @@ export default function RunAllButton() {
       const scanSince = new Date().toISOString();
       await dispatch("/api/scan");
       await new Promise((r) => setTimeout(r, SETTLE_MS));
-      await pollWorkflow("scanner.yml", scanSince, 30_000, (e) =>
+      await pollWorkflow("scanner.yml", scanSince, 15_000, (e) =>
         toast.loading(`Scanning… ${Math.round(e / 60)}m`, { id: tid, duration: Infinity }));
 
       // Step 2 — Discovery
@@ -35,7 +35,7 @@ export default function RunAllButton() {
       const discSince = new Date().toISOString();
       await dispatch("/api/discover");
       await new Promise((r) => setTimeout(r, SETTLE_MS));
-      await pollWorkflow("discovery.yml", discSince, 20_000, (e) =>
+      await pollWorkflow("discovery.yml", discSince, 10_000, (e) =>
         toast.loading(`Discovery… ${Math.round(e / 60)}m`, { id: tid, duration: Infinity }));
 
       // Step 3 — AI Summaries
@@ -44,7 +44,7 @@ export default function RunAllButton() {
       const sumSince = new Date().toISOString();
       await dispatch("/api/summarize");
       await new Promise((r) => setTimeout(r, SETTLE_MS));
-      await pollWorkflow("summarize.yml", sumSince, 20_000, (e) =>
+      await pollWorkflow("summarize.yml", sumSince, 30_000, (e) =>
         toast.loading(`AI summaries… ${Math.round(e / 60)}m`, { id: tid, duration: Infinity }));
 
       setPhase("done");
