@@ -32,9 +32,8 @@ export default function RunAllButton() {
       // Step 2 — Discovery
       setPhase("discovering");
       toast.loading("Scan done — running Discovery…", { id: tid, duration: Infinity });
+      // Discovery auto-triggers via workflow_run after scanner — don't dispatch manually
       const discSince = new Date().toISOString();
-      await dispatch("/api/discover");
-      await new Promise((r) => setTimeout(r, SETTLE_MS));
       await pollWorkflow("discovery.yml", discSince, 10_000, (e) =>
         toast.loading(`Discovery… ${Math.round(e / 60)}m`, { id: tid, duration: Infinity }));
 
