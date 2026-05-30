@@ -22,7 +22,7 @@ async def main() -> None:
 
     if args.summarize:
         print("Force-summarizing latest signals with Gemini...")
-        signals = store.list_signals(limit=100)
+        signals = store.list_signals(limit=500)
         # Deduplicate — one per symbol
         seen: set[str] = set()
         unique = []

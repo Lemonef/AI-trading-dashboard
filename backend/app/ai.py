@@ -101,28 +101,28 @@ async def _groq_signal_summary(signal: Signal, settings: Settings) -> tuple[str,
                 },
             )
             if res.status_code == 429:
-                retry_after = int(res.headers.get("retry-after", 0))
-                # Check if daily quota hit (no retry-after or very large value)
+                # Use float() first — Groq returns "2.8" not "3", int("2.8") raises ValueError
+                retry_after = int(float(res.headers.get("retry-after", 0)))
                 err_body = res.text.lower()
                 is_daily = "daily" in err_body or "exceeded" in err_body or retry_after > 120
                 if is_daily:
                     _groq_exhausted = True
                     print(f"  [Groq 429] {signal.symbol} — daily quota exhausted, circuit open")
+                    from app.alerts import send_system_alert
+                    await send_system_alert(
+                        f"⚠️ Groq daily quota exhausted ({signal.symbol}) — falling back to Gemini.",
+                        settings,
+                    )
+                    if settings.gemini_api_key:
+                        return await _gemini_signal_summary(signal, settings)
+                    return signal.summary, False
                 else:
-                    # Default 60s: TPM exhaustion refills in ~60s even when header is absent
-                    wait = retry_after if retry_after > 0 else 60
-                    print(f"  [Groq 429] {signal.symbol} — rate limit, sleeping {wait}s")
+                    # TPM hit — sleep the exact retry-after, then retry Groq (not Gemini)
+                    wait = retry_after if retry_after > 0 else 5
+                    print(f"  [Groq TPM] {signal.symbol} — sleeping {wait}s then retry")
                     await asyncio.sleep(wait)
-                from app.alerts import send_system_alert
-                await send_system_alert(
-                    f"⚠️ Groq AI rate limit hit ({signal.symbol})\n"
-                    "Free tier: 30 req/min, 14,400 req/day on llama-3.1-8b.\n"
-                    "Falling back to Gemini if available.",
-                    settings,
-                )
-                if settings.gemini_api_key:
-                    return await _gemini_signal_summary(signal, settings)
-                return signal.summary, False
+                    # retry falls through — loop would require refactor; re-call self
+                    return await _groq_signal_summary(signal, settings)
             res.raise_for_status()
             text = res.json()["choices"][0]["message"]["content"].strip()
             if text:
