@@ -3,6 +3,7 @@
 import { Zap } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { pollWorkflow } from "../../lib/pollWorkflow";
 
 type Phase = "idle" | "scanning" | "discovering" | "summarizing" | "done" | "error";
 
@@ -13,46 +14,20 @@ async function dispatch(route: string): Promise<void> {
   if (!res.ok) throw new Error(await res.text());
 }
 
-async function pollUntilDone(
-  workflow: string,
-  since: string,
-  intervalMs: number,
-  label: () => string,
-  toastId: string | number,
-): Promise<void> {
-  for (let i = 0; i < 120; i++) {
-    await new Promise((r) => setTimeout(r, intervalMs));
-    toast.loading(label(), { id: toastId, duration: Infinity });
-    const res = await fetch(
-      `/api/run-all?workflow=${workflow}&since=${encodeURIComponent(since)}`,
-    );
-    if (!res.ok) continue;
-    const data = await res.json();
-    if (data.status === "completed") {
-      if (data.conclusion !== "success") throw new Error(`${workflow}: ${data.conclusion}`);
-      return;
-    }
-  }
-  throw new Error(`${workflow} timed out`);
-}
-
 export default function RunAllButton() {
   const [phase, setPhase] = useState<Phase>("idle");
 
   async function runAll() {
     setPhase("scanning");
     const tid = toast.loading("Scan starting…", { duration: Infinity });
-    let elapsed = 0;
 
     try {
       // Step 1 — Scan
       const scanSince = new Date().toISOString();
       await dispatch("/api/scan");
       await new Promise((r) => setTimeout(r, SETTLE_MS));
-      await pollUntilDone("scanner.yml", scanSince, 30_000, () => {
-        elapsed += 30;
-        return `Scanning… ${Math.round(elapsed / 60)}m`;
-      }, tid);
+      await pollWorkflow("scanner.yml", scanSince, 30_000, (e) =>
+        toast.loading(`Scanning… ${Math.round(e / 60)}m`, { id: tid, duration: Infinity }));
 
       // Step 2 — Discovery
       setPhase("discovering");
@@ -60,10 +35,8 @@ export default function RunAllButton() {
       const discSince = new Date().toISOString();
       await dispatch("/api/discover");
       await new Promise((r) => setTimeout(r, SETTLE_MS));
-      await pollUntilDone("discovery.yml", discSince, 20_000, () => {
-        elapsed += 20;
-        return `Discovery… ${Math.round(elapsed / 60)}m`;
-      }, tid);
+      await pollWorkflow("discovery.yml", discSince, 20_000, (e) =>
+        toast.loading(`Discovery… ${Math.round(e / 60)}m`, { id: tid, duration: Infinity }));
 
       // Step 3 — AI Summaries
       setPhase("summarizing");
@@ -71,10 +44,8 @@ export default function RunAllButton() {
       const sumSince = new Date().toISOString();
       await dispatch("/api/summarize");
       await new Promise((r) => setTimeout(r, SETTLE_MS));
-      await pollUntilDone("summarize.yml", sumSince, 20_000, () => {
-        elapsed += 20;
-        return `AI summaries… ${Math.round(elapsed / 60)}m`;
-      }, tid);
+      await pollWorkflow("summarize.yml", sumSince, 20_000, (e) =>
+        toast.loading(`AI summaries… ${Math.round(e / 60)}m`, { id: tid, duration: Infinity }));
 
       setPhase("done");
       toast.success("All done — reloading…", { id: tid, duration: 5000 });

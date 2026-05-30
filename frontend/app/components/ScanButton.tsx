@@ -3,25 +3,26 @@
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { pollWorkflow } from "../../lib/pollWorkflow";
 
 export default function ScanButton() {
   const [scanning, setScanning] = useState(false);
 
   async function scan() {
     setScanning(true);
-    const id = toast.loading("Triggering scan…", { duration: Infinity });
+    const tid = toast.loading("Scan starting…", { duration: Infinity });
     try {
+      const since = new Date().toISOString();
       const res = await fetch("/api/scan", { method: "POST" });
       if (!res.ok) throw new Error(`${res.status}`);
-      toast.dismiss(id);
-      toast.success("Scan triggered! Reloading in 15s…", { duration: 15000 });
-      setTimeout(() => {
-        setScanning(false);
-        window.location.reload();
-      }, 15000);
-    } catch {
-      toast.dismiss(id);
-      toast.error("Scan failed. Is the backend running?");
+      await new Promise((r) => setTimeout(r, 12_000));
+      await pollWorkflow("scanner.yml", since, 30_000, (elapsed) => {
+        toast.loading(`Scanning… ${Math.round(elapsed / 60)}m`, { id: tid, duration: Infinity });
+      });
+      toast.success("Scan complete — reloading…", { id: tid, duration: 4000 });
+      setTimeout(() => window.location.reload(), 3000);
+    } catch (err) {
+      toast.error(`Scan failed: ${err instanceof Error ? err.message : "unknown"}`, { id: tid, duration: 6000 });
       setScanning(false);
     }
   }
