@@ -114,6 +114,27 @@ export async function getWatchlist(sessionId?: string | null): Promise<Set<strin
   }
 }
 
+// ── Last discovery ────────────────────────────────────────────────────────────
+
+export async function getLastDiscovery(): Promise<string | null> {
+  if (!SUPABASE_URL || !ANON_KEY) return null;
+  try {
+    const url = new URL(`${SUPABASE_URL}/rest/v1/market_scores`);
+    url.searchParams.set("select", "scanned_at");
+    url.searchParams.set("order", "scanned_at.desc");
+    url.searchParams.set("limit", "1");
+    const res = await fetch(url, {
+      cache: "no-store",
+      headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` },
+    });
+    if (!res.ok) return null;
+    const rows: { scanned_at: string }[] = await res.json();
+    return rows[0]?.scanned_at ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // ── Daily summary ─────────────────────────────────────────────────────────────
 
 export async function getDailySummary(): Promise<DailySummary | null> {

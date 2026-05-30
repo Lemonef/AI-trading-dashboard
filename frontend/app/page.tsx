@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { Activity, Bell, ShieldCheck, Target } from "lucide-react";
-import { getSignals, getWatchlist, getDailySummary, type Signal } from "../lib/api";
+import { getSignals, getWatchlist, getDailySummary, getLastDiscovery, type Signal } from "../lib/api";
 import ScanButton from "./components/ScanButton";
 import SummarizeButton from "./components/SummarizeButton";
 import SignalsTable from "./components/SignalsTable";
@@ -37,8 +37,8 @@ function MetricCard({ icon, label, value, dim = false }: { icon: ReactNode; labe
 
 export default async function Home() {
   const sessionId = (await cookies()).get("session_id")?.value ?? null;
-  const [signals, watchlist, dailySummary] = await Promise.all([
-    getSignals(), getWatchlist(sessionId), getDailySummary(),
+  const [signals, watchlist, dailySummary, lastDiscoveryRaw] = await Promise.all([
+    getSignals(), getWatchlist(sessionId), getDailySummary(), getLastDiscovery(),
   ]);
 
   const active = signals.filter((s) => s.action !== "no_trade");
@@ -52,6 +52,12 @@ const isDemo = signals.length > 0 && signals.every((s) => s.exchange === "demo")
     : null;
   const lastAiSummary = (dailySummary?.updated_at ?? dailySummary?.created_at)
     ? new Date((dailySummary!.updated_at ?? dailySummary!.created_at)!).toLocaleString("en-US", {
+        month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false,
+        timeZone: "Asia/Bangkok",
+      })
+    : null;
+  const lastDiscovery = lastDiscoveryRaw
+    ? new Date(lastDiscoveryRaw).toLocaleString("en-US", {
         month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false,
         timeZone: "Asia/Bangkok",
       })
@@ -93,6 +99,12 @@ const isDemo = signals.length > 0 && signals.every((s) => s.exchange === "demo")
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-buy" />
               Last scan {lastUpdated}
             </span>
+            {lastDiscovery && (
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-400" />
+                Last discovery {lastDiscovery}
+              </span>
+            )}
             {lastAiSummary && (
               <span className="flex items-center gap-1.5">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400" />
