@@ -22,6 +22,17 @@ const SPOT_METALS: Record<string, string> = {
   "XPTUSD=X": "TVC:PLATINUM", "XPDUSD=X": "TVC:PALLADIUM",
 };
 
+// NYSE Arca ETFs — TradingView uses AMEX prefix for NYSE Arca
+const AMEX_ETFS = new Set([
+  "SPY", "IWM", "DIA",
+  "XLE", "XLK", "XLF", "XLV", "XLI", "XLB", "XLU", "XLP", "XLY",
+  "GLD", "SLV", "USO", "ARKK",
+  "EWY", "EWT", "EEM", "VGK",
+]);
+
+// NYSE-listed stocks (not NASDAQ)
+const NYSE_STOCKS = new Set(["PLTR", "NOW"]);
+
 export function symbolToTradingView(symbol: string): string | null {
   if (symbol.includes("/")) {
     const [base, quote] = symbol.split("/");
@@ -33,5 +44,7 @@ export function symbolToTradingView(symbol: string): string | null {
   if (AGRI_FUTURES[symbol]) return AGRI_FUTURES[symbol];
   if (INDEX_MAP[symbol]) return INDEX_MAP[symbol];
   if (symbol.endsWith("=X")) return `FX:${symbol.replace("=X", "")}`;
+  if (AMEX_ETFS.has(symbol)) return `AMEX:${symbol}`;
+  if (NYSE_STOCKS.has(symbol)) return `NYSE:${symbol}`;
   return `NASDAQ:${symbol}`;
 }
