@@ -4,10 +4,16 @@ from datetime import date
 from app.config import Settings
 from app.models import Signal
 
-# Groq free tier: 30 req/min BUT only 6,000 TPM on llama-3.1-8b-instant.
-# Each call is ~2500 tokens (2200 input + 300 output) → max 2.4 req/min before TPM exhausted.
-# 60s / 2.4 = 25s minimum spacing. Use 26s to stay safely under.
-_RATE_LIMIT_SLEEP = 26.0
+# Groq free tier: 6,000 TPM on llama-3.1-8b-instant.
+# Per-signal prompt ~350 tokens (150 input + 200 output) → ~17 calls/min safe.
+# Use 6s spacing to stay under TPM ceiling with margin.
+_RATE_LIMIT_SLEEP = 6.0
+
+# Inline IDS cheatsheet — replaces loading full skill files per signal call (~1875 tokens saved).
+_IDS_MINI = (
+    "IDS: L1=Macro, L2=Regime(EMA/ADX), L3=Setup(pattern/vol), L4=Catalyst(trigger).\n"
+    "Strategies: Rockstar=trend(EMA50>EMA200+ADX≥25), Sniper=breakout(vol≥1.3+MACD+RSI), Watcher=weekly regime."
+)
 
 # Circuit breakers — set True once quota exhausted to skip remaining calls
 _groq_exhausted = False   # daily limit (14,400 req/day)
@@ -62,36 +68,23 @@ async def _groq_signal_summary(signal: Signal, settings: Settings) -> tuple[str,
     fear_greed_label = enrichment.get("fear_greed_label", "")
     btc_dom = enrichment.get("btc_dominance")
 
-    sentiment_line = ""
+    extras = []
     if galaxy is not None:
-        sentiment_line = (
-            f"Social: Galaxy Score {galaxy}/100, Alt Rank #{alt_rank}, "
-            f"Sentiment {sentiment_pct}% bullish. "
-        )
-    macro_line = ""
+        extras.append(f"Galaxy:{galaxy}/100 AltRank:#{alt_rank} Sentiment:{sentiment_pct}%bull")
     if fear_greed is not None:
-        macro_line = f"Macro: Fear/Greed {fear_greed} ({fear_greed_label}), BTC dom {btc_dom}%. "
-
-    skill_context = _load_skills(settings)
+        extras.append(f"F/G:{fear_greed}({fear_greed_label}) BTCdom:{btc_dom}%")
 
     prompt = (
-        f"{skill_context}\n\n"
-        "---\n\n"
-        "You are a trading analyst. Using the IDS framework and Investor DNA above, "
-        f"write a focused signal brief for {signal.symbol} tailored to DNA: {settings.investor_dna}.\n\n"
-        f"DATA:\n"
-        f"- Trend: {signal.trend} | Action: {signal.action.replace('_', ' ')} | Confidence: {round(signal.confidence * 100)}%\n"
-        f"- EMA50 {'above' if ema50 > ema200 else 'below'} EMA200 | ADX {round(adx)} ({'strong' if adx >= 25 else 'weak'}) | RSI {round(rsi)} | Vol {round(vol, 1)}x\n"
-        f"- TP: {signal.tp} | SL: {signal.sl}\n"
-        + (f"- {macro_line}\n" if macro_line else "")
-        + (f"- {sentiment_line}\n" if sentiment_line else "")
-        + f"\nReasons: {'; '.join(signal.reasons[:3])}\n\n"
-        "Write exactly 3 sentences then a score line:\n"
-        "1. REGIME (IDS Layer 1+2): trend context + ADX/RSI read\n"
-        "2. SETUP (IDS Layer 3): what triggered, what's missing, sentiment if available\n"
-        "3. VERDICT: TP/SL levels + one action note for this DNA profile. End: 'Not financial advice — user must confirm.'\n"
-        "Score: X/10 — one word (e.g. 'Score: 6/10 — fragmented'). Rate overall setup quality 1–10 based on trend strength, trigger clarity, and sentiment alignment.\n\n"
-        "Under 130 words. Specific numbers. English only."
+        f"{_IDS_MINI}\n\n"
+        f"{signal.symbol}|DNA:{settings.investor_dna}\n"
+        f"Trend:{signal.trend}|Action:{signal.action.replace('_',' ')}|Conf:{round(signal.confidence*100)}%\n"
+        f"EMA50{'>' if ema50>ema200 else '<'}EMA200|ADX:{round(adx)}({'strong' if adx>=25 else 'weak'})|RSI:{round(rsi)}|Vol:{round(vol,1)}x\n"
+        f"TP:{signal.tp}|SL:{signal.sl}"
+        + (f"\n{' '.join(extras)}" if extras else "")
+        + f"\nReasons:{';'.join(signal.reasons[:3])}\n\n"
+        "3 sentences then exactly: Score: N/10 — oneword\n"
+        "1.REGIME:trend+ADX/RSI 2.SETUP:trigger+gaps+sentiment 3.VERDICT:TP/SL+DNA action. End sentence 3 with 'Not financial advice — user must confirm.'\n"
+        "<120 words total."
     )
 
     try:
@@ -164,19 +157,18 @@ async def _gemini_signal_summary(signal: Signal, settings: Settings) -> tuple[st
             rsi = ind.get("rsi") or 50
             vol = ind.get("volume_ratio") or 0
 
-            ema_pos = "above" if ema50 > ema200 else "below"
-            adx_label = "strong trend" if adx >= 25 else "weak/no trend"
             action_label = signal.action.replace("_", " ")
-            signal_json = signal.model_dump_json()
 
             prompt = (
-                "You are a trading analyst using the Investor Decision Stack (IDS) framework.\n\n"
-                f"Analyze this signal for {signal.symbol} and write exactly 3 sentences:\n"
-                f"1. REGIME: trend={signal.trend}, EMA50 {ema_pos} EMA200, ADX {round(adx)} ({adx_label}), RSI {round(rsi)}.\n"
-                f"2. SETUP: signal={action_label}, confidence={round(signal.confidence * 100)}%, volume ratio {round(vol, 1)}x. Key conditions met or missing.\n"
-                f"3. VERDICT: TP={signal.tp}, SL={signal.sl}. End with 'Not financial advice — user must confirm.'\n\n"
-                "Under 90 words total. Specific numbers. English only.\n\n"
-                f"Data: {signal_json}"
+                f"{_IDS_MINI}\n\n"
+                f"{signal.symbol}|DNA:{settings.investor_dna}\n"
+                f"Trend:{signal.trend}|Action:{action_label}|Conf:{round(signal.confidence*100)}%\n"
+                f"EMA50{'>' if ema50>ema200 else '<'}EMA200|ADX:{round(adx)}({'strong' if adx>=25 else 'weak'})|RSI:{round(rsi)}|Vol:{round(vol,1)}x\n"
+                f"TP:{signal.tp}|SL:{signal.sl}\n"
+                f"Reasons:{';'.join(signal.reasons[:3])}\n\n"
+                "3 sentences then exactly: Score: N/10 — oneword\n"
+                "1.REGIME:trend+ADX/RSI 2.SETUP:trigger+gaps 3.VERDICT:TP/SL+DNA action. End sentence 3 with 'Not financial advice — user must confirm.'\n"
+                "<90 words total."
             )
 
             print(f"  [Gemini] calling for {signal.symbol} (attempt {attempt + 1})…")

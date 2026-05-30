@@ -46,11 +46,13 @@ const isDemo = signals.length > 0 && signals.every((s) => s.exchange === "demo")
   const lastUpdated = signals.length > 0
     ? new Date(signals[0].created_at).toLocaleString("en-US", {
         month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false,
+        timeZone: "Asia/Bangkok",
       })
     : null;
   const lastAiSummary = (dailySummary?.updated_at ?? dailySummary?.created_at)
     ? new Date((dailySummary!.updated_at ?? dailySummary!.created_at)!).toLocaleString("en-US", {
         month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false,
+        timeZone: "Asia/Bangkok",
       })
     : null;
 

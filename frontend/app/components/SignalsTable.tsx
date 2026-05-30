@@ -95,7 +95,7 @@ function pctStr(target: number | null | undefined, close: number): string {
 }
 
 function parseAiScore(summary: string): { num: number; label: string } | null {
-  const m = summary.match(/Score:\s*(\d+)\/10\s*[—\-]\s*(\w+)/i);
+  const m = summary.match(/\*{0,2}Score:\s*(\d+)\/10\s*[—–\-]\s*(\w+)/i);
   if (!m) return null;
   return { num: parseInt(m[1], 10), label: m[2] };
 }
