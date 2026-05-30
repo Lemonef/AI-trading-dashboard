@@ -9,6 +9,7 @@ import DailyReport from "./components/DailyReport";
 import DnaSelector from "./components/DnaSelector";
 import TopMarketsPanel from "./components/TopMarketsPanel";
 import DiscoverButton from "./components/DiscoverButton";
+import RunAllButton from "./components/RunAllButton";
 
 const actionLabels: Record<Signal["action"], string> = {
   long_setup: "Long setup",
@@ -68,6 +69,7 @@ const isDemo = signals.length > 0 && signals.every((s) => s.exchange === "demo")
           </div>
           <div className="flex flex-wrap gap-2 justify-end">
             <DnaSelector />
+            <RunAllButton />
             <SummarizeButton />
             <DiscoverButton />
             <ScanButton />
