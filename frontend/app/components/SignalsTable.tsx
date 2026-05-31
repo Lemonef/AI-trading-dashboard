@@ -338,13 +338,11 @@ export default function SignalsTable({
                 <div className="mt-1 text-[10px] text-zinc-400 tabular-nums">
                   {Math.round(signal.confidence * 100)}%
                 </div>
-                {signal.ai_enhanced && (() => {
-                  const sc = parseAiScore(signal.summary);
-                  if (!sc) return null;
-                  const color = sc.num >= 7 ? "text-buy" : sc.num >= 5 ? "text-wait" : "text-zinc-400";
+                {signal.ai_score != null && (() => {
+                  const color = signal.ai_score >= 7 ? "text-buy" : signal.ai_score >= 5 ? "text-wait" : "text-zinc-400";
                   return (
                     <div className={`mt-0.5 text-[10px] font-medium tabular-nums ${color}`}>
-                      AI {sc.num}/10 — {sc.label}
+                      AI {signal.ai_score}/10{signal.ai_score_label ? ` — ${signal.ai_score_label}` : ""}
                     </div>
                   );
                 })()}

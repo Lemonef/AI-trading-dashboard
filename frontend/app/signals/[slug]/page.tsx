@@ -382,14 +382,12 @@ export default async function SignalDetailPage({
               <span className="text-sm font-semibold text-ink">Rules score: {setupScore}/10</span>
               <span className="ml-2 text-sm text-zinc-500">— {scoreLabel(setupScore)}</span>
             </div>
-            {signal.ai_enhanced && (() => {
-              const sc = parseAiScore(signal.summary);
-              if (!sc) return null;
-              const color = sc.num >= 7 ? "text-buy font-semibold" : sc.num >= 5 ? "text-wait font-semibold" : "text-zinc-500 font-semibold";
+            {signal.ai_score != null && (() => {
+              const color = signal.ai_score >= 7 ? "text-buy font-semibold" : signal.ai_score >= 5 ? "text-wait font-semibold" : "text-zinc-500 font-semibold";
               return (
                 <div className="flex items-center gap-2">
-                  <span className={`text-sm ${color}`}>AI score: {sc.num}/10</span>
-                  <span className="text-sm text-zinc-500">— {sc.label}</span>
+                  <span className={`text-sm ${color}`}>AI score: {signal.ai_score}/10</span>
+                  {signal.ai_score_label && <span className="text-sm text-zinc-500">— {signal.ai_score_label}</span>}
                   <span className="rounded bg-buy/10 px-1.5 py-0.5 text-[10px] font-semibold text-buy">✦ AI</span>
                 </div>
               );

@@ -127,7 +127,10 @@ class SignalStore:
     def save_signal(self, signal: Signal) -> Signal:
         payload = signal.model_dump(mode="json")
         # Never overwrite ai_enhanced on upsert — managed by the summarize pipeline
+        # Never overwrite ai_enhanced/ai_score on upsert — managed by summarize pipeline
         payload.pop("ai_enhanced", None)
+        payload.pop("ai_score", None)
+        payload.pop("ai_score_label", None)
         # enrichment is local-only context for AI prompts — not a signals table column
         payload.pop("enrichment", None)
         # new fields — strip until schema migration is run
@@ -160,15 +163,26 @@ class SignalStore:
         self.local_file.write_text(json.dumps([payload, *existing][:500], indent=2), encoding="utf-8")
         return signal
 
-    def update_signal_summary(self, signal_id: str, summary: str, ai_enhanced: bool) -> None:
+    def update_signal_summary(
+        self,
+        signal_id: str,
+        summary: str,
+        ai_enhanced: bool,
+        ai_score: int | None = None,
+        ai_score_label: str | None = None,
+    ) -> None:
         if not self.supabase_enabled:
             print(f"    [skip] supabase not enabled")
             return
         url = f"{self.settings.supabase_url}/rest/v1/signals?id=eq.{signal_id}"
+        payload: dict = {"summary": summary, "ai_enhanced": ai_enhanced}
+        if ai_score is not None:
+            payload["ai_score"] = ai_score
+            payload["ai_score_label"] = ai_score_label
         response = httpx.patch(
             url,
             headers={**self._headers(), "Prefer": "return=minimal"},
-            json={"summary": summary, "ai_enhanced": ai_enhanced},
+            json=payload,
             timeout=20,
         )
         print(f"    PATCH id={signal_id[:8]}… → {response.status_code}")

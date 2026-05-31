@@ -59,11 +59,21 @@ async def main() -> None:
 
             print(f"  {signal.symbol} id={signal.id}")
             new_summary, ai_enhanced = await force_summarize_signal(signal, settings)
+            # Parse Score: N/10 — word from AI response to store separately
+            ai_score: int | None = None
+            ai_score_label: str | None = None
+            if ai_enhanced:
+                import re
+                m = re.search(r"Score:\s*(\d+)/10\s*[—–\-]\s*(\w+)", new_summary, re.IGNORECASE)
+                if m:
+                    ai_score = int(m.group(1))
+                    ai_score_label = m.group(2)
             if signal.id:
-                store.update_signal_summary(signal.id, new_summary, ai_enhanced)
+                store.update_signal_summary(signal.id, new_summary, ai_enhanced, ai_score, ai_score_label)
             else:
                 print(f"    ⚠ no id — skipping update")
-            label = "✦ AI" if ai_enhanced else "⚠ fallback (check GEMINI_API_KEY)"
+            score_str = f" score={ai_score}/10 ({ai_score_label})" if ai_score else ""
+            label = f"✦ AI{score_str}" if ai_enhanced else "⚠ fallback (check GEMINI_API_KEY)"
             print(f"    → {label}")
         # Stamp updated_at so dashboard shows correct "Last AI summary" time
         store.stamp_summarize_time(date.today().isoformat())

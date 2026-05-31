@@ -26,6 +26,8 @@ class Signal(BaseModel):
     previous_action: str | None = None
     previous_trend: str | None = None
     ai_enhanced: bool = False
+    ai_score: int | None = None
+    ai_score_label: str | None = None
     indicators: dict[str, float | None] = Field(default_factory=dict)
     reasons: list[str] = Field(default_factory=list)
     enrichment: dict[str, float | str | None] = Field(default_factory=dict)

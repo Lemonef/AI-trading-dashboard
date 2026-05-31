@@ -13,6 +13,8 @@ export type Signal = {
   changed: boolean;
   trend_changed?: boolean;
   ai_enhanced?: boolean;
+  ai_score?: number | null;
+  ai_score_label?: string | null;
   created_at: string;
   indicators: Record<string, number | null>;
   reasons: string[];
