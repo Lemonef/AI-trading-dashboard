@@ -5,9 +5,9 @@ export async function pollWorkflow(
   onTick: (elapsed: number) => void,
   maxIterations = 200,
 ): Promise<void> {
-  // Subtract 30s from since to handle browser/GitHub server clock skew.
-  // Risk of catching a previous run is low — runs are spaced at least 30 min apart.
-  const sinceBuffered = new Date(new Date(since).getTime() - 30_000).toISOString();
+  // Subtract 10s from since to handle browser/GitHub server clock skew (typically 1-3s).
+  // Keeping this tight prevents accidentally matching a previous failed run.
+  const sinceBuffered = new Date(new Date(since).getTime() - 10_000).toISOString();
 
   let elapsed = 0;
   for (let i = 0; i < maxIterations; i++) {
