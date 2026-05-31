@@ -205,10 +205,6 @@ export default async function SignalDetailPage({
     no_trade: `Score ${setupScore}/10 + Regime sideways/weak · stay flat`,
   };
 
-  const rr =
-    signal.tp && signal.sl
-      ? ((signal.tp - signal.close) / (signal.close - signal.sl)).toFixed(1)
-      : null;
 
   return (
     <main className="min-h-screen pb-12">
@@ -282,35 +278,11 @@ export default async function SignalDetailPage({
           </div>
 
           {/* Metric tiles */}
-          <div className="grid grid-cols-2 divide-x divide-line border-b border-line sm:grid-cols-4">
-            {[
-              { label: "Price", value: fmt(signal.close), color: "text-ink" },
-              {
-                label: "TP Target",
-                value: signal.tp ? fmt(signal.tp) : "—",
-                sub: signal.tp ? pct(signal.tp, signal.close) : "",
-                color: "text-buy",
-              },
-              {
-                label: "SL Risk",
-                value: signal.sl ? fmt(signal.sl) : "—",
-                sub: signal.sl ? pct(signal.sl, signal.close) : "",
-                color: "text-sell",
-              },
-              {
-                label: "R : R",
-                value: rr ? `1 : ${rr}` : "—",
-                color: Number(rr) >= 2 ? "text-buy" : "text-zinc-500",
-              },
-            ].map(({ label, value, sub, color }) => (
-              <div key={label} className="px-4 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
-                  {label}
-                </p>
-                <p className={`mt-0.5 text-lg font-semibold tabular-nums ${color}`}>{value}</p>
-                {sub && <p className={`text-xs tabular-nums ${color} opacity-70`}>{sub}</p>}
-              </div>
-            ))}
+          <div className="grid grid-cols-1 divide-x divide-line border-b border-line sm:grid-cols-1">
+            <div className="px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">Price</p>
+              <p className="mt-0.5 text-lg font-semibold tabular-nums text-ink">{fmt(signal.close)}</p>
+            </div>
           </div>
 
           {/* Confidence bar */}
@@ -427,32 +399,26 @@ export default async function SignalDetailPage({
 
 
         {/* ── Entry trigger + Invalidation ─────────────────────────────────── */}
-        {(signal.tp || signal.sl) && (
+        {signal.action !== "no_trade" && (
           <div className="border border-line bg-white divide-y divide-line text-sm">
-            {signal.action !== "no_trade" && (
-              <div className="flex items-start gap-3 px-5 py-3">
-                <span className="text-base">✅</span>
-                <div>
-                  <span className="font-semibold text-ink">Entry trigger:</span>{" "}
-                  <span className="text-zinc-600">
-                    {signal.action === "long_setup"
-                      ? `Price holds above ${fmt(signal.close)} + volume confirm + MACD bullish`
-                      : signal.action === "short_setup"
-                        ? `Price breaks below ${fmt(signal.close)} + volume confirm + MACD bearish`
-                        : `Wait for breakout with volume ≥ 1.3× avg + ADX > 25`}
-                  </span>
-                </div>
+            <div className="flex items-start gap-3 px-5 py-3">
+              <span className="text-base">✅</span>
+              <div>
+                <span className="font-semibold text-ink">Entry trigger:</span>{" "}
+                <span className="text-zinc-600">
+                  {signal.action === "long_setup"
+                    ? `Price holds above ${fmt(signal.close)} + volume confirm + MACD bullish`
+                    : signal.action === "short_setup"
+                      ? `Price breaks below ${fmt(signal.close)} + volume confirm + MACD bearish`
+                      : `Wait for breakout with volume ≥ 1.3× avg + ADX > 25`}
+                </span>
               </div>
-            )}
+            </div>
             <div className="flex items-start gap-3 px-5 py-3">
               <span className="text-base">❌</span>
               <div>
                 <span className="font-semibold text-ink">Invalidation:</span>{" "}
-                <span className="text-zinc-600">
-                  {signal.sl
-                    ? `Price closes below ${fmt(signal.sl)} · setup failed · exit immediately`
-                    : "EMA50 crosses below EMA200 · trend structure broken"}
-                </span>
+                <span className="text-zinc-600">EMA50 crosses below EMA200 · trend structure broken</span>
               </div>
             </div>
           </div>
