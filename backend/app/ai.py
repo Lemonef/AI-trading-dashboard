@@ -89,8 +89,11 @@ async def _groq_signal_summary(signal: Signal, settings: Settings) -> tuple[str,
         f"TP:{signal.tp}|SL:{signal.sl}"
         + (f"\n{' '.join(extras)}" if extras else "")
         + f"\nReasons:{';'.join(signal.reasons[:3])}\n\n"
-        "3 sentences then exactly: Score: N/10 — oneword\n"
+        "Write 3 sentences:\n"
         "1.REGIME:trend+ADX/RSI 2.SETUP:trigger+gaps+sentiment 3.VERDICT:TP/SL+DNA action. End sentence 3 with 'Not financial advice — user must confirm.'\n"
+        "Then on a NEW LINE write EXACTLY (replace NUM with integer 1-10, replace WORD with one word):\n"
+        "Score: NUM/10 — WORD\n"
+        "Example: Score: 7/10 — solid\n"
         "<120 words total."
     )
 
@@ -173,8 +176,11 @@ async def _gemini_signal_summary(signal: Signal, settings: Settings) -> tuple[st
                 f"EMA50{'>' if ema50>ema200 else '<'}EMA200|ADX:{round(adx)}({'strong' if adx>=25 else 'weak'})|RSI:{round(rsi)}|Vol:{round(vol,1)}x\n"
                 f"TP:{signal.tp}|SL:{signal.sl}\n"
                 f"Reasons:{';'.join(signal.reasons[:3])}\n\n"
-                "3 sentences then exactly: Score: N/10 — oneword\n"
+                "Write 3 sentences:\n"
                 "1.REGIME:trend+ADX/RSI 2.SETUP:trigger+gaps 3.VERDICT:TP/SL+DNA action. End sentence 3 with 'Not financial advice — user must confirm.'\n"
+                "Then on a NEW LINE write EXACTLY (replace NUM with integer 1-10, replace WORD with one word):\n"
+                "Score: NUM/10 — WORD\n"
+                "Example: Score: 7/10 — solid\n"
                 "<90 words total."
             )
 
