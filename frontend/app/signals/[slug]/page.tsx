@@ -413,6 +413,7 @@ export default async function SignalDetailPage({
                 <span className="text-[10px] text-zinc-400 tabular-nums">
                   {new Date(signal.created_at).toLocaleString("en-US", {
                     month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false,
+                    timeZone: "Asia/Bangkok",
                   })}
                 </span>
               )}

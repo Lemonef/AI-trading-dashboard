@@ -274,12 +274,11 @@ export default function SignalsTable({
       </div>
 
       {/* Table header */}
-      <div className="grid grid-cols-[1fr_0.9fr_0.9fr_auto] sm:grid-cols-[1.6fr_0.6fr_0.9fr_1.2fr_1.4fr_auto] border-b border-line bg-panel px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+      <div className="grid grid-cols-[1fr_0.9fr_0.9fr_auto] sm:grid-cols-[1.6fr_0.6fr_0.9fr_1.2fr_auto] border-b border-line bg-panel px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
         <span>Symbol</span>
         <span className="hidden sm:block">Trend</span>
         <span>Signal</span>
         <span>Price</span>
-        <span className="hidden sm:block">Entry / TP / SL / R:R</span>
         <span className="w-7" />
       </div>
 
@@ -361,8 +360,8 @@ export default function SignalsTable({
                 )}
               </div>
 
-              {/* Entry / TP / SL / R:R — hidden on mobile */}
-              <div className="hidden sm:block space-y-0.5 text-xs">
+              {/* Entry / TP / SL / R:R removed — visible on signal detail page */}
+              <div className="hidden">
                 <div className="flex gap-1.5 items-baseline">
                   <span className="text-[10px] text-zinc-400 w-8">Entry</span>
                   <span className="tabular-nums font-medium text-ink">{fmt(signal.close)}</span>
