@@ -5,15 +5,22 @@ from app.config import Settings
 from app.models import Signal
 
 # Groq free tier: 6,000 TPM on llama-3.1-8b-instant.
-# Per-signal prompt ~350 tokens (150 input + 200 output) → ~17 calls/min safe.
-# Use 6s spacing to stay under TPM ceiling with margin.
-_RATE_LIMIT_SLEEP = 6.0
+# Per-signal prompt ~590 tokens (390 input + 200 output) → ~10 calls/min at 7s sleep.
+# 7s: 8.5 calls/min × 590 = 5,015 TPM — safely under 6,000.
+_RATE_LIMIT_SLEEP = 7.0
 
-# Inline IDS cheatsheet — replaces loading full skill files per signal call (~1875 tokens saved).
-_IDS_MINI = (
-    "IDS: L1=Macro, L2=Regime(EMA/ADX), L3=Setup(pattern/vol), L4=Catalyst(trigger).\n"
-    "Strategies: Rockstar=trend(EMA50>EMA200+ADX≥25), Sniper=breakout(vol≥1.3+MACD+RSI), Watcher=weekly regime."
-)
+# Condensed skill brief: IDS layers + DNA profiles + Legend routing.
+# Replaces 110k-char full skill files (was 1,875 tokens) with ~350 tokens.
+_SKILL_BRIEF = """\
+IDS 4 LAYERS: L1=Macro(global risk-on/off) L2=Regime(EMA50>EMA200+ADX≥25=bullish trend) L3=Setup(breakout+vol+MACD+RSI in range) L4=Catalyst(trigger event)
+Strategies: Rockstar=trend rider(EMA+ADX≥25 required) Sniper=breakout entry(vol≥1.3x+MACD cross+RSI 40-65 long/35-60 short) Watcher=weekly regime filter(no signal in sideways)
+
+DNA PROFILES — tailor verdict tone + blind-spot warning to match user's DNA:
+🏎️ Speed Racer: Day/scalp trader. Edge=speed. BLIND SPOT=FOMO entry+no exit plan. Require ADX>25+vol>1.5x+R:R≥1:2 before bullish verdict. Pump brakes if conditions weak. Legend: Livermore(pivot+vol breakout+pyramid) or Rotter(scalp+order flow).
+🔥 Trend Rider: Momentum+narrative+swing. Edge=crowd reading. BLIND SPOT=late entry chasing KOLs+all-in one narrative. Check narrative lifecycle—if late stage suggest exit not entry. Max 15% port per trade. Legend: PTJ(macro+Fed inflection) or Minervini(stock base breakout+VCP).
+🏔️ Patient Investor: Long-term+DCA+value. Edge=patience. BLIND SPOT=analysis paralysis+value trap. Push to act when conditions met—'condition ครบแล้ว ถ้ายังรอ=พลาด'. Require invalidation level before entry. Legend: Buffett(moat+margin of safety) or Lynch(PEG+growth+GARP).
+⚙️ System Analyst: Quant+rule-based+bot. Edge=process. BLIND SPOT=overfit+regime blindness. Warn when live diverges from backtest. Check if system was designed for current regime. Legend: Simons(edge+Sharpe validation) or Dalio(portfolio allocation+risk parity).\
+"""
 
 # Circuit breakers — set True once quota exhausted to skip remaining calls
 _groq_exhausted = False   # daily limit (14,400 req/day)
@@ -75,7 +82,7 @@ async def _groq_signal_summary(signal: Signal, settings: Settings) -> tuple[str,
         extras.append(f"F/G:{fear_greed}({fear_greed_label}) BTCdom:{btc_dom}%")
 
     prompt = (
-        f"{_IDS_MINI}\n\n"
+        f"{_SKILL_BRIEF}\n\n"
         f"{signal.symbol}|DNA:{settings.investor_dna}\n"
         f"Trend:{signal.trend}|Action:{signal.action.replace('_',' ')}|Conf:{round(signal.confidence*100)}%\n"
         f"EMA50{'>' if ema50>ema200 else '<'}EMA200|ADX:{round(adx)}({'strong' if adx>=25 else 'weak'})|RSI:{round(rsi)}|Vol:{round(vol,1)}x\n"
@@ -160,7 +167,7 @@ async def _gemini_signal_summary(signal: Signal, settings: Settings) -> tuple[st
             action_label = signal.action.replace("_", " ")
 
             prompt = (
-                f"{_IDS_MINI}\n\n"
+                f"{_SKILL_BRIEF}\n\n"
                 f"{signal.symbol}|DNA:{settings.investor_dna}\n"
                 f"Trend:{signal.trend}|Action:{action_label}|Conf:{round(signal.confidence*100)}%\n"
                 f"EMA50{'>' if ema50>ema200 else '<'}EMA200|ADX:{round(adx)}({'strong' if adx>=25 else 'weak'})|RSI:{round(rsi)}|Vol:{round(vol,1)}x\n"
